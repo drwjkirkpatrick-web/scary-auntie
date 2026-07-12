@@ -29,18 +29,21 @@ scary-auntie is a Flask-based web application that enables children and adolesce
 
 ## Prepopulated Database
 
-24 verified plants from authoritative sources:
+**48 verified plants** from authoritative sources:
 
-| Plant | Native Name(s) | Language |
-|-------|---------------|----------|
-| Cloudberry | Aqpik, Akpiq | Yupik, Inupiaq |
-| Labrador Tea | Cen'ana, Cena'a | Dena'ina, Ahtna |
-| Fireweed | Cama'i, Pamiuqtaq | Dena'ina, Yupik |
-| Crowberry | Pauraq, Kanat'aah | Yupik, Athabascan |
-| Sitka Valerian | Various | Southeast/Southcentral |
-| ...and 19 more | | |
+| Category | Examples | Count |
+|----------|----------|-------|
+| **Berries** | Cloudberry, Blueberry, Crowberry, Haskap, Rose Hips, Highbush Cranberry, Bunchberry, Sitka Mountain Ash, Wild Strawberry | 9 |
+| **Medicinal Herbs** | Labrador Tea, Yarrow, Coltsfoot, Fireweed, Goldthread, Arnica, Chamomile, Horsetail, Valerian, Buckbean, Lousewort, Paintbrush, Avens, Bluebells, Twinflower | 15 |
+| **Root/Tuber Foods** | Alpine Sweetvetch, Eskimo Potato, Silverweed | 3 |
+| **Trees** | White Spruce, Balsam Poplar, Paper Birch | 3 |
+| **Mushrooms** | Tinder Fungus, Chaga | 2 |
+| **Spring Greens** | Cow Parsnip, Nettle, Fireweed Shoots, Solomon's Seal, Watermelon Berry, Mountain Sorrel, Oysterplant | 7 |
+| **Other** | Kinnikinnick, Soapberry, Prickly Rose, Narcissus Anemone, Arctic Lupine, Prairie Smoke | 6 |
 
-Sources: Garibaldi (1999), Kari (1987), Jones (1983), Schofield (1993), USFS Alaska Region TEK
+**Sources**: Garibaldi (1999), Kari (1987), Jones (1983), Schofield (1993), Heller (1976), USFS Alaska Region TEK
+
+**Languages represented**: Yupik, Inupiaq, Dena'ina, Ahtna, Tlingit, Haida, Alutiiq, Athabascan (multiple dialects), and others
 
 ## Installation
 
