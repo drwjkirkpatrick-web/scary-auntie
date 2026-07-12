@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#128279; Blockchain Integrity</h1>
+    <div class="admin-actions">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Dashboard</a>
+        <a href="{{ url_for('admin_logout') }}" class="btn btn-danger">Logout</a>
+    </div>
+</section>
+
+<section class="content-section">
+    <div class="card">
+        <h2>Chain Summary</h2>
+        <p><strong>Total blocks:</strong> {{ chain.total_blocks }}</p>
+        <p><strong>Latest hash:</strong> <code>{{ chain.latest_hash }}</code></p>
+        <p>
+            <strong>Integrity:</strong>
+            {% if chain.integrity_ok %}
+                <span class="status-ok">&#9989; All blocks verified — no tampering detected</span>
+            {% else %}
+                <span class="status-error">&#10060; TAMPERING DETECTED in {{ chain.tampered_blocks|length }} block(s)!</span>
+            {% endif %}
+        </p>
+
+        {% if chain.table_counts %}
+        <p><strong>Records by table:</strong></p>
+        <ul>
+            {% for table, count in chain.table_counts.items() %}
+                <li>{{ table }}: {{ count }} blocks</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</section>
+
+<section class="content-section">
+    <h2>Recent Blocks (Last 50)</h2>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Block #</th>
+                <th>Table</th>
+                <th>Record ID</th>
+                <th>Operation</th>
+                <th>Timestamp</th>
+                <th>Recorder</th>
+                <th>Hash (first 16)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for block in blocks %}
+            <tr>
+                <td>{{ block.id }}</td>
+                <td>{{ block.table_name }}</td>
+                <td>{{ block.record_id }}</td>
+                <td>{{ block.operation }}</td>
+                <td>{{ block.timestamp[:19] }}</td>
+                <td>{{ block.recorder_name or '-' }}</td>
+                <td><code>{{ block.block_hash[:16] }}...</code></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#128218; Browse Plants</h1>
+    <p>Verified Alaskan Native botanicals from authoritative ethnobotanical sources.</p>
+</section>
+
+<section class="search-bar">
+    <form method="get" action="{{ url_for('plant_list') }}">
+        <input type="text" name="search" value="{{ search }}"
+               placeholder="Search by name (English, Latin, or Native)..."
+               class="search-input">
+        <button type="submit" class="btn btn-primary">Search</button>
+        {% if search %}
+            <a href="{{ url_for('plant_list') }}" class="btn btn-secondary">Clear</a>
+        {% endif %}
+    </form>
+</section>
+
+<section class="plants-grid">
+    {% for plant in plants %}
+    <a href="{{ url_for('plant_detail', plant_id=plant.id) }}" class="plant-card">
+        <div class="plant-card-header">
+            <h3>{{ plant.english_name }}</h3>
+            <span class="plant-badge verified">&#9989; Verified</span>
+        </div>
+        <div class="plant-card-body">
+            <p class="plant-latin"><em>{{ plant.latin_binomial }}</em></p>
+            {% if plant.native_alaskan_name %}
+                <p class="plant-native"><strong>Native name:</strong> {{ plant.native_alaskan_name }}
+                {% if plant.native_language %}
+                    <span class="lang-tag">{{ plant.native_language }}</span>
+                {% endif %}
+                </p>
+            {% endif %}
+            {% if plant.family %}
+                <p class="plant-family"><strong>Family:</strong> {{ plant.family }}</p>
+            {% endif %}
+            {% if plant.habitat %}
+                <p class="plant-habitat"><strong>Habitat:</strong> {{ plant.habitat[:80] }}{% if plant.habitat|length > 80 %}...</p>{% endif %}
+            {% endif %}
+            {% if plant.traditional_uses %}
+                <p class="plant-uses">{{ plant.traditional_uses[:120] }}{% if plant.traditional_uses|length > 120 %}...</p>{% endif %}
+            {% endif %}
+        </div>
+    </a>
+    {% else %}
+        <div class="empty-state">
+            <p>No plants found. Try a different search term.</p>
+        </div>
+    {% endfor %}
+</section>
+
+{% endblock %}

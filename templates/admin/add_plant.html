@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#127807; Add New Plant</h1>
+    <div class="admin-actions">
+        <a href="{{ url_for('admin_plants') }}" class="btn btn-secondary">Back to Plants</a>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Dashboard</a>
+        <a href="{{ url_for('admin_logout') }}" class="btn btn-danger">Logout</a>
+    </div>
+</section>
+
+<section class="form-section">
+    <form method="post" action="{{ url_for('admin_add_plant') }}" class="entry-form">
+
+        <div class="form-group">
+            <label for="english_name">English Name *</label>
+            <input type="text" id="english_name" name="english_name" required
+                   placeholder="e.g., Labrador Tea">
+        </div>
+
+        <div class="form-group">
+            <label for="latin_binomial">Latin Binomial (Scientific Name) *</label>
+            <input type="text" id="latin_binomial" name="latin_binomial" required
+                   placeholder="e.g., Ledum palustre ssp. decumbens">
+        </div>
+
+        <div class="form-group">
+            <label for="native_alaskan_name">Native Alaskan Name</label>
+            <input type="text" id="native_alaskan_name" name="native_alaskan_name"
+                   placeholder="e.g., Cen'ana">
+        </div>
+
+        <div class="form-group">
+            <label for="native_language">Native Language</label>
+            <input type="text" id="native_language" name="native_language"
+                   placeholder="e.g., Dena'ina">
+        </div>
+
+        <div class="form-group">
+            <label for="family">Plant Family</label>
+            <input type="text" id="family" name="family"
+                   placeholder="e.g., Ericaceae">
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="3"
+                      placeholder="General description of the plant..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="habitat">Habitat</label>
+            <input type="text" id="habitat" name="habitat"
+                   placeholder="e.g., Tundra bogs, wet meadows">
+        </div>
+
+        <div class="form-group">
+            <label for="traditional_uses">Traditional Uses</label>
+            <textarea id="traditional_uses" name="traditional_uses" rows="3"
+                      placeholder="How is this plant traditionally used?"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="parts_used">Parts Used</label>
+            <input type="text" id="parts_used" name="parts_used"
+                   placeholder="e.g., Leaves, young shoots">
+        </div>
+
+        <div class="form-group">
+            <label for="preparation">Preparation</label>
+            <textarea id="preparation" name="preparation" rows="3"
+                      placeholder="How is the plant prepared for use?"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="cautions">Cautions</label>
+            <textarea id="cautions" name="cautions" rows="2"
+                      placeholder="Any safety cautions or contraindications..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="source_author">Source Author(s)</label>
+            <input type="text" id="source_author" name="source_author"
+                   placeholder="e.g., Kari, Priscilla Russell">
+        </div>
+
+        <div class="form-group">
+            <label for="source_url">Source URL</label>
+            <input type="url" id="source_url" name="source_url"
+                   placeholder="https://...">
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-lg">
+                &#128190; Add Verified Plant
+            </button>
+        </div>
+    </form>
+</section>
+
+{% endblock %}

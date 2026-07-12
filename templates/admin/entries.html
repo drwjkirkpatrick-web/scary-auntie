@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#128221; Review Entries</h1>
+    <div class="admin-actions">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Dashboard</a>
+        <a href="{{ url_for('admin_entries') }}" class="btn btn-secondary {% if not status_filter %}active{% endif %}">All</a>
+        <a href="{{ url_for('admin_entries', status='pending') }}" class="btn btn-secondary {% if status_filter == 'pending' %}active{% endif %}">Pending</a>
+        <a href="{{ url_for('admin_entries', status='approved') }}" class="btn btn-secondary {% if status_filter == 'approved' %}active{% endif %}">Approved</a>
+        <a href="{{ url_for('admin_entries', status='flagged') }}" class="btn btn-secondary {% if status_filter == 'flagged' %}active{% endif %}">Flagged</a>
+        <a href="{{ url_for('admin_logout') }}" class="btn btn-danger">Logout</a>
+    </div>
+</section>
+
+<section class="content-section">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Recorder</th>
+                <th>Plant</th>
+                <th>Native Name Used</th>
+                <th>Location</th>
+                <th>Observation</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr>
+                <td>{{ entry.id }}</td>
+                <td>{{ entry.recorder_name }}{% if entry.recorder_age %} ({{ entry.recorder_age }}){% endif %}</td>
+                <td>{{ entry.plant_english_name or 'Unknown' }}</td>
+                <td>{{ entry.native_name_used or '-' }}</td>
+                <td>
+                    {{ entry.location_description or '-' }}
+                    {% if entry.latitude and entry.longitude %}
+                        <br><small>{{ '%.4f'|format(entry.latitude) }}, {{ '%.4f'|format(entry.longitude) }}</small>
+                    {% endif %}
+                </td>
+                <td>{{ entry.observation[:100] }}{% if entry.observation|length > 100 %}...</td>{% endif %}
+                <td>{{ entry.entry_date[:10] }}</td>
+                <td>
+                    {% if entry.reviewed == 0 %}
+                        <span class="badge badge-pending">Pending</span>
+                    {% elif entry.reviewed == 1 %}
+                        <span class="badge badge-approved">Approved</span>
+                    {% else %}
+                        <span class="badge badge-flagged">Flagged</span>
+                    {% endif %}
+                </td>
+                <td><a href="{{ url_for('admin_entry_detail', entry_id=entry.id) }}" class="btn btn-sm">Review</a></td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9" class="empty-cell">No entries found in this category.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+{% endblock %}

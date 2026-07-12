@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>{{ plant.english_name }}</h1>
+    <p class="subtitle"><em>{{ plant.latin_binomial }}</em></p>
+    {% if plant.family %}
+        <p class="family">Family: {{ plant.family }}</p>
+    {% endif %}
+</section>
+
+<section class="plant-detail">
+    <div class="detail-grid">
+        <div class="detail-main">
+            {% if plant.native_alaskan_name %}
+            <div class="detail-section">
+                <h2>&#127760; Native Alaskan Name</h2>
+                <p class="native-name">{{ plant.native_alaskan_name }}</p>
+                {% if plant.native_language %}
+                    <p>Language: {{ plant.native_language }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if plant.description %}
+            <div class="detail-section">
+                <h2>&#128240; Description</h2>
+                <p>{{ plant.description }}</p>
+            </div>
+            {% endif %}
+
+            {% if plant.habitat %}
+            <div class="detail-section">
+                <h2>&#127757; Habitat</h2>
+                <p>{{ plant.habitat }}</p>
+            </div>
+            {% endif %}
+
+            {% if plant.traditional_uses %}
+            <div class="detail-section">
+                <h2>&#127807; Traditional Uses</h2>
+                <p>{{ plant.traditional_uses }}</p>
+            </div>
+            {% endif %}
+
+            {% if plant.parts_used %}
+            <div class="detail-section">
+                <h2>&#127795; Parts Used</h2>
+                <p>{{ plant.parts_used }}</p>
+            </div>
+            {% endif %}
+
+            {% if plant.preparation %}
+            <div class="detail-section">
+                <h2>&#127860; Preparation</h2>
+                <p>{{ plant.preparation }}</p>
+            </div>
+            {% endif %}
+
+            {% if plant.cautions %}
+            <div class="detail-section caution">
+                <h2>&#9888;&#65039; Cautions</h2>
+                <p>{{ plant.cautions }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="detail-sidebar">
+            <div class="sidebar-card">
+                <h3>&#128161; Source</h3>
+                {% if plant.source_author %}
+                    <p><strong>Author(s):</strong> {{ plant.source_author }}</p>
+                {% endif %}
+                {% if plant.source_url %}
+                    <p><a href="{{ plant.source_url }}" target="_blank">View source &rarr;</a></p>
+                {% endif %}
+                <p><strong>Status:</strong> <span class="verified-badge">&#9989; Verified</span></p>
+            </div>
+
+            <div class="sidebar-card">
+                <h3>&#128279; Blockchain Record</h3>
+                <p>This plant's data is permanently recorded on the tamper-evident blockchain.</p>
+                {% if plant.block_hash %}
+                    <p class="hash-preview">Hash: {{ plant.block_hash[:16] }}...</p>
+                {% endif %}
+            </div>
+
+            <a href="{{ url_for('add_entry') }}?plant_id={{ plant.id }}"
+               class="btn btn-primary btn-block">
+                &#127793; Record an Observation of This Plant
+            </a>
+        </div>
+    </div>
+</section>
+
+<div class="back-link">
+    <a href="{{ url_for('plant_list') }}">&#8592; Back to all plants</a>
+</div>
+
+{% endblock %}

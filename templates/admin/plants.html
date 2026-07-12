@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#127807; Manage Plants</h1>
+    <div class="admin-actions">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Dashboard</a>
+        <a href="{{ url_for('admin_add_plant') }}" class="btn btn-primary">+ Add New Plant</a>
+        <a href="{{ url_for('admin_logout') }}" class="btn btn-danger">Logout</a>
+    </div>
+</section>
+
+<section class="content-section">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>English Name</th>
+                <th>Latin Binomial</th>
+                <th>Native Name</th>
+                <th>Language</th>
+                <th>Family</th>
+                <th>Status</th>
+                <th>Source Author</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for plant in plants %}
+            <tr>
+                <td>{{ plant.id }}</td>
+                <td><a href="{{ url_for('plant_detail', plant_id=plant.id) }}" target="_blank">{{ plant.english_name }}</a></td>
+                <td><em>{{ plant.latin_binomial }}</em></td>
+                <td>{{ plant.native_alaskan_name or '-' }}</td>
+                <td>{{ plant.native_language or '-' }}</td>
+                <td>{{ plant.family or '-' }}</td>
+                <td>
+                    {% if plant.verified %}
+                        <span class="badge badge-approved">Verified</span>
+                    {% else %}
+                        <span class="badge badge-pending">Community</span>
+                    {% endif %}
+                </td>
+                <td>{{ plant.source_author or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+{% endblock %}
