@@ -4,7 +4,7 @@
 
 <section class="page-header">
     <h1>&#128218; Browse Plants</h1>
-    <p>Verified Alaskan Native botanicals from authoritative ethnobotanical sources.</p>
+    <p>{{ total }} verified botanicals from authoritative ethnobotanical sources.</p>
 </section>
 
 <section class="search-bar">
@@ -18,6 +18,21 @@
         {% endif %}
     </form>
 </section>
+
+{% if families %}
+<section class="content-section">
+    <details class="filter-panel">
+        <summary>&#128218; Filter by Family ({{ families|length }} families)</summary>
+        <div class="family-tags">
+            {% for f in families %}
+            <a href="{{ url_for('plant_list', search=f.family) }}" class="family-tag">
+                {{ f.family }} ({{ f.count }})
+            </a>
+            {% endfor %}
+        </div>
+    </details>
+</section>
+{% endif %}
 
 <section class="plants-grid">
     {% for plant in plants %}
@@ -39,10 +54,10 @@
                 <p class="plant-family"><strong>Family:</strong> {{ plant.family }}</p>
             {% endif %}
             {% if plant.habitat %}
-                <p class="plant-habitat"><strong>Habitat:</strong> {{ plant.habitat[:80] }}{% if plant.habitat|length > 80 %}...</p>{% endif %}
+                <p class="plant-habitat"><strong>Habitat:</strong> {{ plant.habitat[:80] }}{% if plant.habitat|length > 80 %}...{% endif %}</p>
             {% endif %}
             {% if plant.traditional_uses %}
-                <p class="plant-uses">{{ plant.traditional_uses[:120] }}{% if plant.traditional_uses|length > 120 %}...</p>{% endif %}
+                <p class="plant-uses">{{ plant.traditional_uses[:120] }}{% if plant.traditional_uses|length > 120 %}...{% endif %}</p>
             {% endif %}
         </div>
     </a>
@@ -52,5 +67,23 @@
         </div>
     {% endfor %}
 </section>
+
+{% if pages > 1 %}
+<div class="pagination">
+    {% if page > 1 %}
+        <a href="{{ url_for('plant_list', page=page-1, search=search) }}" class="page-link">&laquo; Prev</a>
+    {% endif %}
+    {% for p in range(1, pages + 1) %}
+        {% if p == page %}
+            <span class="page-current">{{ p }}</span>
+        {% else %}
+            <a href="{{ url_for('plant_list', page=p, search=search) }}" class="page-link">{{ p }}</a>
+        {% endif %}
+    {% endfor %}
+    {% if page < pages %}
+        <a href="{{ url_for('plant_list', page=page+1, search=search) }}" class="page-link">Next &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
 
 {% endblock %}

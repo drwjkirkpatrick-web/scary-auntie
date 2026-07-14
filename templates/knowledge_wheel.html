@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#128260; The Knowledge Wheel</h1>
+    <p>Knowledge categories as spokes of the wheel &mdash; the botanical database is the hub.</p>
+</section>
+
+<section class="stats-bar">
+    <div class="stat-card">
+        <div class="stat-number">{{ stats.total_categories }}</div>
+        <div class="stat-label">Categories</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ stats.verified_plants }}</div>
+        <div class="stat-label">Plants (Hub)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ stats.total_entries }}</div>
+        <div class="stat-label">Total Observations</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ stats.approved_entries }}</div>
+        <div class="stat-label">Approved</div>
+    </div>
+</section>
+
+<section class="content-section">
+    <div class="category-grid">
+        {% for cat in categories %}
+        <a href="{{ url_for('category_view', slug=cat.slug) }}" class="category-card {% if cat.is_hub %}hub-card{% endif %}">
+            <div class="category-icon">{{ cat.icon or '&#128218;' }}</div>
+            <h3>{{ cat.display_name }}</h3>
+            <p>{{ cat.description or '' }}</p>
+            <div class="category-count">{{ category_counts.get(cat.slug, 0) }} observations</div>
+            {% if cat.is_hub %}<span class="hub-badge">&#127968; HUB</span>{% endif %}
+        </a>
+        {% endfor %}
+    </div>
+</section>
+
+{% endblock %}

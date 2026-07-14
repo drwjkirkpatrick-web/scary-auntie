@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}scary-auntie{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    {% block head %}{% endblock %}
 </head>
 <body>
     <nav class="navbar">
@@ -14,12 +13,13 @@
             <a href="{{ url_for('index') }}">
                 <span class="logo-leaf">&#127807;</span> scary-auntie
             </a>
-            <span class="tagline">Alaskan Native Ecological Knowledge</span>
+            <span class="tagline">Native Ecological Knowledge</span>
         </div>
         <div class="nav-links">
             <a href="{{ url_for('index') }}">Home</a>
             <a href="{{ url_for('plant_list') }}">Plants</a>
-            <a href="{{ url_for('add_entry') }}">Add Observation</a>
+            <a href="{{ url_for('knowledge_wheel') }}">Knowledge</a>
+            <a href="{{ url_for('add_observation') }}">Add Observation</a>
             <a href="{{ url_for('map_view') }}">Map</a>
             <a href="{{ url_for('admin_login') }}" class="admin-link">Teacher Login</a>
         </div>
@@ -40,8 +40,10 @@
     </main>
 
     <footer>
-        <p>scary-auntie — Honoring Alaskan Native Traditional Ecological Knowledge</p>
-        <p>All data entries are recorded on a tamper-evident blockchain for integrity.</p>
+        <p>scary-auntie &mdash; Honoring Native Traditional Ecological Knowledge</p>
+        <p>The botanical database is the hub of the wheel. Every record is preserved on a tamper-evident blockchain.</p>
     </footer>
+
+    {% block scripts %}{% endblock %}
 </body>
 </html>

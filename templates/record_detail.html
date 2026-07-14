@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>{{ category.icon or '&#128218;' }} {{ record.title or 'Observation #' ~ record.id }}</h1>
+    <p>
+        <a href="{{ url_for('category_view', slug=category.slug) }}">{{ category.display_name }}</a>
+        &mdash; recorded by <strong>{{ record.recorder_name }}</strong>
+        {% if record.recorder_age %} (age {{ record.recorder_age }}){% endif %}
+        on {{ record.entry_date[:10] }}
+    </p>
+</section>
+
+<section class="plant-detail">
+    <div class="detail-grid">
+        <div class="detail-main">
+            {% if record.title %}
+            <div class="detail-section">
+                <h2>&#128221; Title</h2>
+                <p>{{ record.title }}</p>
+            </div>
+            {% endif %}
+
+            <div class="detail-section">
+                <h2>&#128064; Observation</h2>
+                <div class="observation-text">{{ record.observation or 'No observation text.' }}</div>
+            </div>
+
+            {% if record.location_description or (record.latitude and record.longitude) %}
+            <div class="detail-section">
+                <h2>&#128205; Location</h2>
+                <p>{{ record.location_description or 'No description' }}</p>
+                {% if record.latitude and record.longitude %}
+                    <p><strong>Coordinates:</strong> {{ '%.6f'|format(record.latitude) }}, {{ '%.6f'|format(record.longitude) }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if record.plant_english_name %}
+            <div class="detail-section">
+                <h2>&#127807; Linked Plant (Hub Connection)</h2>
+                <p><strong>{{ record.plant_english_name }}</strong></p>
+                {% if record.latin_binomial %}<p><em>{{ record.latin_binomial }}</em></p>{% endif %}
+                {% if record.plant_native_name %}<p><strong>Native name:</strong> {{ record.plant_native_name }}</p>{% endif %}
+                <p><a href="{{ url_for('plant_detail', plant_id=record.plant_id) }}">View plant details &rarr;</a></p>
+            </div>
+            {% endif %}
+
+            {% if record.native_name_used %}
+            <div class="detail-section">
+                <h2>&#127760; Native Name Used</h2>
+                <p>{{ record.native_name_used }}</p>
+            </div>
+            {% endif %}
+
+            {% if record.tags %}
+            <div class="detail-section">
+                <h2>&#127991; Tags</h2>
+                <p>
+                    {% for tag in record.tags.split(',') %}
+                    <span class="lang-tag">{{ tag.strip() }}</span>
+                    {% endfor %}
+                </p>
+            </div>
+            {% endif %}
+
+            {% if record.photo_path %}
+            <div class="detail-section">
+                <h2>&#128247; Photo</h2>
+                <img src="{{ url_for('static', filename=record.photo_path) }}"
+                     alt="Observation photo" class="observation-photo">
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="detail-sidebar">
+            <div class="sidebar-card">
+                <h3>&#128161; Review Status</h3>
+                {% if record.reviewed == 0 %}
+                    <p>Status: <span class="badge badge-pending">Pending</span></p>
+                {% elif record.reviewed == 1 %}
+                    <p>Status: <span class="badge badge-approved">Approved</span></p>
+                    <p>Reviewed by: {{ record.reviewed_by }} on {{ record.reviewed_at[:10] }}</p>
+                {% else %}
+                    <p>Status: <span class="badge badge-flagged">Flagged</span></p>
+                    <p>Reviewed by: {{ record.reviewed_by }} on {{ record.reviewed_at[:10] }}</p>
+                {% endif %}
+            </div>
+
+            <div class="sidebar-card">
+                <h3>&#128279; Blockchain Record</h3>
+                <p>This observation is permanently recorded on the tamper-evident blockchain.</p>
+                {% if record.block_hash %}
+                    <p class="hash-preview">Hash: {{ record.block_hash[:16] }}...</p>
+                {% endif %}
+            </div>
+
+            <a href="{{ url_for('add_observation', category=category.slug) }}" class="btn btn-primary btn-block">
+                &#127793; Add Another Observation
+            </a>
+        </div>
+    </div>
+</section>
+
+<div class="back-link">
+    <a href="{{ url_for('category_view', slug=category.slug) }}">&#8592; Back to {{ category.display_name }}</a>
+</div>
+
+{% endblock %}

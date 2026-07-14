@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>{{ category.icon or '&#128218;' }} {{ category.display_name }}</h1>
+    <p>{{ category.description or '' }}</p>
+    {% if category.is_hub %}
+        <p class="hub-note">&#127968; This is the botanical hub &mdash; the central reference for all other categories.</p>
+    {% endif %}
+</section>
+
+<section class="admin-actions">
+    <a href="{{ url_for('knowledge_wheel') }}" class="btn btn-secondary">&#8592; Back to Wheel</a>
+    <a href="{{ url_for('add_observation', category=category.slug) }}" class="btn btn-primary">
+        &#127793; Add Observation
+    </a>
+</section>
+
+{% if category.is_hub and legacy_entries %}
+<section class="content-section">
+    <h2>&#128218; Botanical Observations (Legacy)</h2>
+    <p>Observations recorded through the original botanical entry system:</p>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Recorder</th>
+                <th>Plant</th>
+                <th>Location</th>
+                <th>Observation</th>
+                <th>Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in legacy_entries %}
+            <tr>
+                <td>{{ entry.id }}</td>
+                <td>{{ entry.recorder_name }}{% if entry.recorder_age %} ({{ entry.recorder_age }}){% endif %}</td>
+                <td>{{ entry.plant_english_name or 'Unknown' }}</td>
+                <td>{{ entry.location_description or '-' }}</td>
+                <td>{{ entry.observation[:100] }}{% if entry.observation|length > 100 %}...{% endif %}</td>
+                <td>{{ entry.entry_date[:10] }}</td>
+                <td>
+                    {% if entry.reviewed == 0 %}
+                        <span class="badge badge-pending">Pending</span>
+                    {% elif entry.reviewed == 1 %}
+                        <span class="badge badge-approved">Approved</span>
+                    {% else %}
+                        <span class="badge badge-flagged">Flagged</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="empty-cell">No legacy entries.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endif %}
+
+<section class="content-section">
+    <h2>&#128221; Observations ({{ total }})</h2>
+    {% if records %}
+    <div class="records-list">
+        {% for record in records %}
+        <div class="record-card">
+            <div class="record-header">
+                <h3>
+                    <a href="{{ url_for('record_detail', slug=category.slug, record_id=record.id) }}">
+                        {{ record.title or record.observation[:60] ~ '...' }}
+                    </a>
+                </h3>
+                <span class="record-date">{{ record.entry_date[:10] }}</span>
+            </div>
+            <p class="record-meta">
+                <strong>By:</strong> {{ record.recorder_name }}
+                {% if record.recorder_age %}({{ record.recorder_age }}){% endif %}
+                {% if record.location_description %}<br><strong>Where:</strong> {{ record.location_description }}{% endif %}
+                {% if record.plant_english_name %}<br><strong>Plant:</strong> {{ record.plant_english_name }}{% endif %}
+            </p>
+            <p class="record-observation">{{ record.observation[:200] }}{% if record.observation|length > 200 %}...{% endif %}</p>
+            <div class="record-footer">
+                {% if record.reviewed == 0 %}
+                    <span class="badge badge-pending">Pending</span>
+                {% elif record.reviewed == 1 %}
+                    <span class="badge badge-approved">Approved</span>
+                {% else %}
+                    <span class="badge badge-flagged">Flagged</span>
+                {% endif %}
+                {% if record.native_name_used %}
+                    <span class="lang-tag">{{ record.native_name_used }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if pages > 1 %}
+    <div class="pagination">
+        {% for p in range(1, pages + 1) %}
+            {% if p == page %}
+                <span class="page-current">{{ p }}</span>
+            {% else %}
+                <a href="{{ url_for('category_view', slug=category.slug, page=p) }}" class="page-link">{{ p }}</a>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state">
+        <p>No observations in this category yet.</p>
+        <a href="{{ url_for('add_observation', category=category.slug) }}" class="btn btn-primary">
+            &#127793; Be the first to add one
+        </a>
+    </div>
+    {% endif %}
+</section>
+
+{% endblock %}

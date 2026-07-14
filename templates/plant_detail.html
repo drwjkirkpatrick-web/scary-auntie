@@ -15,7 +15,7 @@
         <div class="detail-main">
             {% if plant.native_alaskan_name %}
             <div class="detail-section">
-                <h2>&#127760; Native Alaskan Name</h2>
+                <h2>&#127760; Native Name</h2>
                 <p class="native-name">{{ plant.native_alaskan_name }}</p>
                 {% if plant.native_language %}
                     <p>Language: {{ plant.native_language }}</p>
@@ -73,7 +73,7 @@
                     <p><strong>Author(s):</strong> {{ plant.source_author }}</p>
                 {% endif %}
                 {% if plant.source_url %}
-                    <p><a href="{{ plant.source_url }}" target="_blank">View source &rarr;</a></p>
+                    <p><a href="{{ plant.source_url }}" target="_blank" rel="noopener">View source &rarr;</a></p>
                 {% endif %}
                 <p><strong>Status:</strong> <span class="verified-badge">&#9989; Verified</span></p>
             </div>
@@ -86,7 +86,7 @@
                 {% endif %}
             </div>
 
-            <a href="{{ url_for('add_entry') }}?plant_id={{ plant.id }}"
+            <a href="{{ url_for('add_observation', plant_id=plant.id, category='botanicals') }}"
                class="btn btn-primary btn-block">
                 &#127793; Record an Observation of This Plant
             </a>

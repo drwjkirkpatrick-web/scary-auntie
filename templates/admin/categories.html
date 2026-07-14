@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#128260; Knowledge Categories</h1>
+    <p>Manage the spokes of the knowledge wheel.</p>
+    <div class="admin-actions">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Dashboard</a>
+        <a href="{{ url_for('admin_logout') }}" class="btn btn-danger">Logout</a>
+    </div>
+</section>
+
+<section class="content-section">
+    <h2>&#128218; Existing Categories</h2>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Icon</th>
+                <th>Display Name</th>
+                <th>Slug</th>
+                <th>Type</th>
+                <th>Observations</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cat in categories %}
+            <tr>
+                <td>{{ cat.id }}</td>
+                <td>{{ cat.icon or '-' }}</td>
+                <td><a href="{{ url_for('category_view', slug=cat.slug) }}">{{ cat.display_name }}</a></td>
+                <td><code>{{ cat.slug }}</code></td>
+                <td>
+                    {% if cat.is_hub %}
+                        <span class="badge badge-approved">&#127968; HUB</span>
+                    {% else %}
+                        <span class="badge badge-pending">Spoke</span>
+                    {% endif %}
+                </td>
+                <td>{{ category_counts.get(cat.slug, 0) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+{% if user.role == 'admin' %}
+<section class="content-section">
+    <h2>&#10133; Add New Category</h2>
+    <form method="post" action="{{ url_for('admin_add_category') }}" class="entry-form">
+        <div class="form-group">
+            <label for="slug">Slug (URL identifier) *</label>
+            <input type="text" id="slug" name="slug" required
+                   placeholder="e.g., birds, fishing, songs"
+                   pattern="[a-z0-9-]+"
+                   title="Lowercase letters, numbers, and hyphens only">
+            <p class="field-hint">This becomes part of the URL: /knowledge/&lt;slug&gt;</p>
+        </div>
+        <div class="form-group">
+            <label for="display_name">Display Name *</label>
+            <input type="text" id="display_name" name="display_name" required
+                   placeholder="e.g., Bird Knowledge">
+        </div>
+        <div class="form-group">
+            <label for="icon">Icon (emoji)</label>
+            <input type="text" id="icon" name="icon"
+                   placeholder="e.g., &#129418;"
+                   maxlength="10">
+        </div>
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="3"
+                      placeholder="What kind of knowledge goes in this category?"></textarea>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Category</button>
+        </div>
+    </form>
+</section>
+{% else %}
+<p class="field-hint">Only admins can create new categories. Ask an admin if you need a new one.</p>
+{% endif %}
+
+{% endblock %}

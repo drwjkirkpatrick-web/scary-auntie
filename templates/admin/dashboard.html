@@ -6,10 +6,13 @@
     <h1>&#128200; Dashboard</h1>
     <p>Welcome, {{ user.display_name }}! (Role: {{ user.role }})</p>
     <div class="admin-actions">
-        <a href="{{ url_for('admin_entries') }}" class="btn btn-secondary">Review Entries</a>
+        <a href="{{ url_for('admin_entries') }}" class="btn btn-secondary">Legacy Entries</a>
+        <a href="{{ url_for('admin_records') }}" class="btn btn-secondary">Review Records</a>
         <a href="{{ url_for('admin_plants') }}" class="btn btn-secondary">Manage Plants</a>
+        <a href="{{ url_for('admin_categories') }}" class="btn btn-secondary">Categories</a>
         <a href="{{ url_for('admin_blockchain') }}" class="btn btn-secondary">Blockchain</a>
         {% if user.role == 'admin' %}
+            <a href="{{ url_for('admin_groups') }}" class="btn btn-secondary">Groups</a>
             <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">Users</a>
         {% endif %}
         <a href="{{ url_for('admin_logout') }}" class="btn btn-danger">Logout</a>
@@ -27,7 +30,7 @@
     </div>
     <div class="stat-card">
         <div class="stat-number">{{ stats.total_entries }}</div>
-        <div class="stat-label">Total Entries</div>
+        <div class="stat-label">Total Observations</div>
     </div>
     <div class="stat-card highlight">
         <div class="stat-number">{{ stats.pending_entries }}</div>
@@ -45,26 +48,28 @@
 
 <section class="content-section">
     <div class="grid-2">
+        <!-- Pending records (new system) -->
         <div class="card">
-            <h2>&#9888;&#65039; Pending Review ({{ pending|length }})</h2>
-            {% if pending %}
+            <h2>&#9888;&#65039; Pending Records ({{ pending_records|length }})</h2>
+            {% if pending_records %}
                 <ul class="entry-list">
-                    {% for entry in pending %}
+                    {% for record in pending_records %}
                         <li>
-                            <strong>{{ entry.recorder_name }}</strong>
-                            {% if entry.recorder_age %}({{ entry.recorder_age }}){% endif %}
+                            <strong>{{ record.recorder_name }}</strong>
+                            [{{ record.category_name or 'Unknown' }}]
                             <br>
-                            <small>{{ entry.location_description or 'No location' }}</small>
+                            <small>{{ record.location_description or 'No location' }}</small>
                             <br>
-                            <a href="{{ url_for('admin_entry_detail', entry_id=entry.id) }}">Review &rarr;</a>
+                            <a href="{{ url_for('admin_record_detail', record_id=record.id) }}">Review &rarr;</a>
                         </li>
                     {% endfor %}
                 </ul>
             {% else %}
-                <p>No pending entries. Great job!</p>
+                <p>No pending records.</p>
             {% endif %}
         </div>
 
+        <!-- Blockchain status -->
         <div class="card">
             <h2>&#128279; Blockchain Status</h2>
             <p>
@@ -75,20 +80,39 @@
                 {% else %}
                     <span class="status-error">&#10060; Tampering detected!</span>
                 {% endif %}<br>
-                <strong>Latest hash:</strong> <code>{{ chain.latest_hash[:20] }}...</code>
+                <strong>Latest hash:</strong> <code>{{ chain.latest_hash[:20] if chain.latest_hash else 'N/A' }}...</code>
             </p>
             <p><a href="{{ url_for('admin_blockchain') }}">View full chain &rarr;</a></p>
         </div>
     </div>
 </section>
 
+{% if pending %}
 <section class="content-section">
-    <h2>&#128221; Recent Entries</h2>
+    <h2>&#128221; Pending Legacy Entries ({{ pending|length }})</h2>
+    <ul class="entry-list">
+        {% for entry in pending %}
+            <li>
+                <strong>{{ entry.recorder_name }}</strong>
+                {% if entry.recorder_age %}({{ entry.recorder_age }}){% endif %}
+                <br>
+                <small>{{ entry.location_description or 'No location' }}</small>
+                <br>
+                <a href="{{ url_for('admin_entry_detail', entry_id=entry.id) }}">Review &rarr;</a>
+            </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+<section class="content-section">
+    <h2>&#128221; Recent Records</h2>
     <table class="data-table">
         <thead>
             <tr>
                 <th>ID</th>
                 <th>Name</th>
+                <th>Category</th>
                 <th>Plant</th>
                 <th>Location</th>
                 <th>Date</th>
@@ -97,24 +121,27 @@
             </tr>
         </thead>
         <tbody>
-            {% for entry in recent %}
+            {% for record in recent_records %}
             <tr>
-                <td>{{ entry.id }}</td>
-                <td>{{ entry.recorder_name }}{% if entry.recorder_age %} ({{ entry.recorder_age }}){% endif %}</td>
-                <td>{{ entry.plant_english_name or 'Unknown' }}</td>
-                <td>{{ entry.location_description or '-' }}</td>
-                <td>{{ entry.entry_date[:10] }}</td>
+                <td>{{ record.id }}</td>
+                <td>{{ record.recorder_name }}{% if record.recorder_age %} ({{ record.recorder_age }}){% endif %}</td>
+                <td>{{ record.category_name or '-' }}</td>
+                <td>{{ record.plant_english_name or '-' }}</td>
+                <td>{{ record.location_description or '-' }}</td>
+                <td>{{ record.entry_date[:10] }}</td>
                 <td>
-                    {% if entry.reviewed == 0 %}
+                    {% if record.reviewed == 0 %}
                         <span class="badge badge-pending">Pending</span>
-                    {% elif entry.reviewed == 1 %}
+                    {% elif record.reviewed == 1 %}
                         <span class="badge badge-approved">Approved</span>
                     {% else %}
                         <span class="badge badge-flagged">Flagged</span>
                     {% endif %}
                 </td>
-                <td><a href="{{ url_for('admin_entry_detail', entry_id=entry.id) }}">Review</a></td>
+                <td><a href="{{ url_for('admin_record_detail', record_id=record.id) }}">Review</a></td>
             </tr>
+            {% else %}
+            <tr><td colspan="8" class="empty-cell">No records yet.</td></tr>
             {% endfor %}
         </tbody>
     </table>

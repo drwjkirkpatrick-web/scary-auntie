@@ -5,14 +5,17 @@
 <section class="hero">
     <div class="hero-content">
         <h1><span class="logo-leaf">&#127807;</span> scary-auntie</h1>
-        <p class="hero-subtitle">A living database of Alaskan Native ecological knowledge <br>
+        <p class="hero-subtitle">A living database of Native ecological knowledge<br>
         built by children, youth, and elders together.</p>
         <div class="hero-actions">
-            <a href="{{ url_for('add_entry') }}" class="btn btn-primary">
+            <a href="{{ url_for('add_observation') }}" class="btn btn-primary">
                 &#127793; Record an Observation
             </a>
             <a href="{{ url_for('plant_list') }}" class="btn btn-secondary">
                 &#128218; Browse Plants
+            </a>
+            <a href="{{ url_for('knowledge_wheel') }}" class="btn btn-secondary">
+                &#128260; Knowledge Wheel
             </a>
         </div>
     </div>
@@ -28,12 +31,32 @@
         <div class="stat-label">Observations</div>
     </div>
     <div class="stat-card">
-        <div class="stat-number">{{ stats.approved_entries }}</div>
-        <div class="stat-label">Approved</div>
+        <div class="stat-number">{{ stats.total_categories }}</div>
+        <div class="stat-label">Knowledge Categories</div>
     </div>
     <div class="stat-card">
         <div class="stat-number">{{ stats.pending_entries }}</div>
         <div class="stat-label">Pending Review</div>
+    </div>
+</section>
+
+<section class="content-section">
+    <h2>&#128260; The Knowledge Wheel</h2>
+    <p class="section-intro">
+        The botanical database is the <strong>hub</strong> &mdash; the central reference
+        for all other knowledge. Each category below is a <strong>spoke</strong> connecting
+        back to the plants and to each other.
+    </p>
+    <div class="category-grid">
+        {% for cat in categories %}
+        <a href="{{ url_for('category_view', slug=cat.slug) }}" class="category-card {% if cat.is_hub %}hub-card{% endif %}">
+            <div class="category-icon">{{ cat.icon or '&#128218;' }}</div>
+            <h3>{{ cat.display_name }}</h3>
+            <p>{{ (cat.description or '')[:100] }}{% if cat.description and cat.description|length > 100 %}...{% endif %}</p>
+            <div class="category-count">{{ category_counts.get(cat.slug, 0) }} observations</div>
+            {% if cat.is_hub %}<span class="hub-badge">&#127968; HUB</span>{% endif %}
+        </a>
+        {% endfor %}
     </div>
 </section>
 
@@ -43,25 +66,30 @@
             <h2>&#127793; What is this project?</h2>
             <p>
                 <strong>scary-auntie</strong> is a community science project that helps
-                children and young people in Alaska record what they know about the
-                plants around them. Every observation is saved with a
-                <strong>blockchain record</strong> — a special kind of digital fingerprint
+                children, young people, and elders record what they know about the
+                plants and the natural world around them. Every observation is saved
+                with a <strong>blockchain record</strong> &mdash; a digital fingerprint
                 that makes sure the information can never be changed without leaving a trace.
             </p>
             <p>
-                You can record a plant using its <strong>Native Alaskan name</strong>,
+                You can record knowledge using your <strong>Native name</strong>,
                 its <strong>Latin scientific name</strong>, or its <strong>English name</strong>.
                 All three are important and honored here.
+            </p>
+            <p>
+                This project is <strong>customizable</strong> &mdash; any group, clan, tribe,
+                village, or school can adapt the wheel to their own languages, territory,
+                and knowledge priorities.
             </p>
         </div>
 
         <div class="card">
             <h2>&#128161; How to contribute</h2>
             <ol>
-                <li>Go outside and find a plant you know.</li>
+                <li>Go outside and observe a plant, animal, weather pattern, or natural feature.</li>
                 <li>Take a photo (ask permission if needed!).</li>
-                <li>Click <a href="{{ url_for('add_entry') }}">"Add Observation"</a>.</li>
-                <li>Tell us where you found it, what you call it, and what you know.</li>
+                <li>Click <a href="{{ url_for('add_observation') }}">"Add Observation"</a>.</li>
+                <li>Choose a knowledge category, tell us where you found it, what you call it, and what you know.</li>
                 <li>A teacher will review and approve your entry.</li>
             </ol>
             <p>
@@ -71,15 +99,20 @@
     </div>
 </section>
 
+{% if groups %}
 <section class="content-section">
-    <h2>&#127759; Recently Approved Observations</h2>
-    {% set recent = [] %}
-    <!-- We'll just show a link to the map for now -->
-    <p>
-        <a href="{{ url_for('map_view') }}" class="btn btn-secondary">
-            View the Observation Map &rarr;
-        </a>
-    </p>
+    <h2>&#128109; Community Groups</h2>
+    <p>Customized knowledge wheels for specific communities:</p>
+    <div class="group-list">
+        {% for group in groups %}
+            <div class="group-chip" style="border-color: {{ group.accent_color }};">
+                <strong>{{ group.name }}</strong>
+                {% if group.region %}<span>{{ group.region }}</span>{% endif %}
+                {% if group.native_language %}<span class="lang-tag">{{ group.native_language }}</span>{% endif %}
+            </div>
+        {% endfor %}
+    </div>
 </section>
+{% endif %}
 
 {% endblock %}

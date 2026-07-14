@@ -1,4 +1,5 @@
-/* scary-auntie: Alaskan Native Ecological Knowledge Database Styles */
+/* scary-auntie: Native Ecological Knowledge Database Styles */
+/* Hub-of-the-Wheel architecture — botanicals are the hub, categories are spokes */
 
 :root {
     --color-primary: #2d5a3d;
@@ -14,6 +15,7 @@
     --color-warning: #b8860b;
     --color-danger: #a33;
     --color-info: #2a5a8a;
+    --color-hub: #2d5a3d;
     --radius: 12px;
     --radius-sm: 8px;
     --shadow: 0 2px 12px rgba(0,0,0,0.08);
@@ -107,6 +109,12 @@ body {
 
 .content-section {
     margin-bottom: 3rem;
+}
+
+.section-intro {
+    color: var(--color-text-light);
+    margin-bottom: 2rem;
+    font-size: 1.05rem;
 }
 
 .grid-2 {
@@ -214,6 +222,185 @@ body {
 
 .card li {
     margin-bottom: 0.5rem;
+}
+
+/* ════════════════════════════════════════ */
+/* KNOWLEDGE WHEEL — CATEGORIES           */
+/* ════════════════════════════════════════ */
+
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.category-card {
+    background: var(--color-card);
+    border-radius: var(--radius);
+    padding: 1.75rem;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.category-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-hover);
+}
+
+.category-card.hub-card {
+    border: 2px solid var(--color-primary);
+    background: linear-gradient(135deg, #f0f7f0 0%, #ffffff 100%);
+}
+
+.category-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.category-card h3 {
+    margin: 0;
+    color: var(--color-primary);
+    font-size: 1.2rem;
+}
+
+.category-card p {
+    color: var(--color-text-light);
+    font-size: 0.9rem;
+    flex-grow: 1;
+}
+
+.category-count {
+    font-size: 0.85rem;
+    color: var(--color-accent);
+    font-weight: 600;
+    margin-top: 0.5rem;
+}
+
+.hub-badge {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: var(--color-primary);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+}
+
+.hub-note {
+    background: #f0f7f0;
+    border-left: 4px solid var(--color-primary);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-sm);
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+}
+
+/* ════════════════════════════════════════ */
+/* RECORDS LIST                           */
+/* ════════════════════════════════════════ */
+
+.records-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+}
+
+.record-card {
+    background: var(--color-card);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.record-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+.record-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+}
+
+.record-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.record-header h3 a {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.record-header h3 a:hover {
+    text-decoration: underline;
+}
+
+.record-date {
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+    white-space: nowrap;
+    margin-left: 1rem;
+}
+
+.record-meta {
+    font-size: 0.85rem;
+    color: var(--color-text-light);
+    margin: 0.5rem 0;
+}
+
+.record-observation {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin: 0.5rem 0;
+}
+
+.record-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+}
+
+/* ════════════════════════════════════════ */
+/* GROUP CHIPS                            */
+/* ════════════════════════════════════════ */
+
+.group-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.group-chip {
+    background: var(--color-card);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1.25rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.group-chip span {
+    font-size: 0.85rem;
+    color: var(--color-text-light);
 }
 
 /* ════════════════════════════════════════ */
@@ -375,6 +562,44 @@ body {
 .search-input:focus {
     outline: none;
     border-color: var(--color-primary);
+}
+
+.filter-panel {
+    background: var(--color-card);
+    border-radius: var(--radius);
+    padding: 1rem 1.5rem;
+    box-shadow: var(--shadow);
+}
+
+.filter-panel summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--color-primary);
+    padding: 0.5rem 0;
+}
+
+.family-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.family-tag {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.85rem;
+    text-decoration: none;
+    color: var(--color-text);
+    transition: background 0.2s;
+}
+
+.family-tag:hover {
+    background: var(--color-primary);
+    color: white;
+    text-decoration: none;
 }
 
 .plants-grid {
@@ -784,6 +1009,60 @@ body {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+}
+
+.entry-list {
+    list-style: none;
+    padding: 0;
+}
+
+.entry-list li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.entry-list li:last-child {
+    border-bottom: none;
+}
+
+/* ════════════════════════════════════════ */
+/* PAGINATION                             */
+/* ════════════════════════════════════════ */
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 2rem 0;
+    flex-wrap: wrap;
+}
+
+.page-link,
+.page-current {
+    display: inline-block;
+    padding: 0.5rem 0.9rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.page-link {
+    background: var(--color-card);
+    color: var(--color-primary);
+    border: 1px solid var(--color-border);
+    transition: background 0.2s;
+}
+
+.page-link:hover {
+    background: var(--color-primary);
+    color: white;
+    text-decoration: none;
+}
+
+.page-current {
+    background: var(--color-primary);
+    color: white;
 }
 
 /* ════════════════════════════════════════ */

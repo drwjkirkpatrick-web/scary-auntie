@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#127793; Record an Observation</h1>
+    <p>Share what you know about the natural world. Your observation will be reviewed by a teacher.</p>
+</section>
+
+<section class="form-section">
+    <form method="post" action="{{ url_for('add_observation') }}" enctype="multipart/form-data" class="entry-form">
+
+        <!-- Category selector -->
+        <div class="form-group">
+            <label for="category">Knowledge Category</label>
+            <select id="category" name="category" onchange="togglePlantField()">
+                {% for cat in categories %}
+                    <option value="{{ cat.slug }}"
+                        {% if current_category and current_category.slug == cat.slug %}selected{% endif %}>
+                        {{ cat.icon or '&#128218;' }} {{ cat.display_name }}
+                        {% if cat.is_hub %} (Hub){% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+            <p class="field-hint">Choose the type of knowledge you want to share.</p>
+        </div>
+
+        <!-- Optional title -->
+        <div class="form-group">
+            <label for="title">Title (optional)</label>
+            <input type="text" id="title" name="title"
+                   placeholder="A short title for your observation">
+        </div>
+
+        <div class="form-group">
+            <label for="recorder_name">Your Name *</label>
+            <input type="text" id="recorder_name" name="recorder_name" required
+                   placeholder="Enter your name">
+        </div>
+
+        <div class="form-group">
+            <label for="recorder_age">Your Age (optional)</label>
+            <input type="number" id="recorder_age" name="recorder_age" min="5" max="120"
+                   placeholder="How old are you?">
+        </div>
+
+        <!-- Plant selector — only shown for botanical hub or when plants are relevant -->
+        <div class="form-group" id="plant-selector">
+            <label for="plant_id">What plant is this related to? (optional)</label>
+            <select id="plant_id" name="plant_id">
+                <option value="">-- Not plant-related / Other --</option>
+                {% for plant in plants %}
+                    <option value="{{ plant.id }}"
+                        {% if preselect_plant_id|int == plant.id %}selected{% endif %}>
+                        {{ plant.english_name }}
+                        {% if plant.native_alaskan_name %}| {{ plant.native_alaskan_name }}{% endif %}
+                        | <em>{{ plant.latin_binomial }}</em>
+                    </option>
+                {% endfor %}
+            </select>
+            <p class="field-hint">Link this observation to a plant from the hub database (optional).</p>
+        </div>
+
+        <div class="form-group">
+            <label for="native_name_used">What do <strong>you</strong> call this?</label>
+            <input type="text" id="native_name_used" name="native_name_used"
+                   placeholder="Any name you use (Native, English, or family name)">
+            <p class="field-hint">This can be a Native name, an English name, or your family's special name for it.</p>
+        </div>
+
+        <div class="form-group">
+            <label for="location_description">Where did you find it?</label>
+            <input type="text" id="location_description" name="location_description"
+                   placeholder="e.g., Near the river behind my grandma's house">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="latitude">Latitude (optional)</label>
+                <input type="number" step="any" id="latitude" name="latitude"
+                       placeholder="e.g., 64.8378">
+            </div>
+            <div class="form-group">
+                <label for="longitude">Longitude (optional)</label>
+                <input type="number" step="any" id="longitude" name="longitude"
+                       placeholder="e.g., -147.7164">
+            </div>
+        </div>
+        <button type="button" class="btn btn-secondary" onclick="getLocation()">
+            &#127759; Get My Location
+        </button>
+        <p id="loc-status" class="field-hint"></p>
+
+        <div class="form-group">
+            <label for="observation">What did you observe? *</label>
+            <textarea id="observation" name="observation" rows="5" required
+                      placeholder="Describe what you saw. What did it look like? What was it doing? What do you know about it?"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="tags">Tags (optional)</label>
+            <input type="text" id="tags" name="tags"
+                   placeholder="Comma-separated tags: medicinal, berry, winter">
+        </div>
+
+        <div class="form-group">
+            <label for="photo">Photo (optional)</label>
+            <input type="file" id="photo" name="photo" accept="image/*">
+            <p class="field-hint">Take a clear photo. Ask permission before sharing photos of people.</p>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-lg">
+                &#128190; Submit Observation
+            </button>
+        </div>
+
+        <p class="consent-note">
+            <em>By submitting, you confirm that you have permission from a parent or guardian
+            to share this information.</em>
+        </p>
+    </form>
+</section>
+
+<script>
+function getLocation() {
+    const status = document.getElementById('loc-status');
+    if (!navigator.geolocation) {
+        status.textContent = 'Geolocation is not supported by your browser.';
+        return;
+    }
+    status.textContent = 'Getting your location...';
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            document.getElementById('latitude').value = position.coords.latitude.toFixed(6);
+            document.getElementById('longitude').value = position.coords.longitude.toFixed(6);
+            status.textContent = 'Location captured successfully!';
+            status.style.color = 'green';
+        },
+        (error) => {
+            status.textContent = 'Unable to get location: ' + error.message;
+            status.style.color = 'red';
+        }
+    );
+}
+
+function togglePlantField() {
+    // Show the plant selector for the botanical hub category.
+    // Other categories can optionally link to plants too, so keep it visible
+    // but change the label.
+    const sel = document.getElementById('category');
+    const plantDiv = document.getElementById('plant-selector');
+    if (sel.value === 'botanicals') {
+        plantDiv.style.display = '';
+    } else {
+        plantDiv.style.display = '';
+    }
+}
+</script>
+
+{% endblock %}

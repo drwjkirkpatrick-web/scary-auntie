@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#128221; Review Record #{{ record.id }}</h1>
+    <div class="admin-actions">
+        <a href="{{ url_for('admin_records') }}" class="btn btn-secondary">Back to Records</a>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Dashboard</a>
+        <a href="{{ url_for('admin_logout') }}" class="btn btn-danger">Logout</a>
+    </div>
+</section>
+
+<section class="content-section">
+    <div class="review-grid">
+        <div class="review-detail">
+            <div class="detail-section">
+                <h2>Recorder Information</h2>
+                <p><strong>Name:</strong> {{ record.recorder_name }}</p>
+                {% if record.recorder_age %}
+                    <p><strong>Age:</strong> {{ record.recorder_age }}</p>
+                {% endif %}
+                <p><strong>Category:</strong> {{ record.category_name or 'Unknown' }}</p>
+                <p><strong>Date:</strong> {{ record.entry_date }}</p>
+            </div>
+
+            {% if record.title %}
+            <div class="detail-section">
+                <h2>Title</h2>
+                <p>{{ record.title }}</p>
+            </div>
+            {% endif %}
+
+            <div class="detail-section">
+                <h2>Plant Connection</h2>
+                <p><strong>Matched Plant:</strong> {{ record.plant_english_name or 'Not linked to a plant' }}</p>
+                {% if record.latin_binomial %}
+                    <p><em>{{ record.latin_binomial }}</em></p>
+                {% endif %}
+                {% if record.plant_native_name %}
+                    <p><strong>Verified Native Name:</strong> {{ record.plant_native_name }}</p>
+                {% endif %}
+                <p><strong>Name Used by Recorder:</strong> {{ record.native_name_used or '-' }}</p>
+            </div>
+
+            <div class="detail-section">
+                <h2>Location</h2>
+                <p>{{ record.location_description or 'No description' }}</p>
+                {% if record.latitude and record.longitude %}
+                    <p><strong>Coordinates:</strong> {{ record.latitude }}, {{ record.longitude }}</p>
+                {% endif %}
+            </div>
+
+            <div class="detail-section">
+                <h2>Observation</h2>
+                <div class="observation-text">{{ record.observation or 'No observation text.' }}</div>
+            </div>
+
+            {% if record.tags %}
+            <div class="detail-section">
+                <h2>Tags</h2>
+                <p>
+                    {% for tag in record.tags.split(',') %}
+                    <span class="lang-tag">{{ tag.strip() }}</span>
+                    {% endfor %}
+                </p>
+            </div>
+            {% endif %}
+
+            {% if record.photo_path %}
+            <div class="detail-section">
+                <h2>Photo</h2>
+                <img src="{{ url_for('static', filename=record.photo_path) }}"
+                     alt="Observation photo" class="observation-photo">
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="review-sidebar">
+            <div class="sidebar-card">
+                <h3>Review Actions</h3>
+
+                {% if record.reviewed == 0 %}
+                    <p>Status: <span class="badge badge-pending">Pending</span></p>
+                {% elif record.reviewed == 1 %}
+                    <p>Status: <span class="badge badge-approved">Approved</span></p>
+                    <p>Reviewed by: {{ record.reviewed_by }} on {{ record.reviewed_at[:10] }}</p>
+                {% else %}
+                    <p>Status: <span class="badge badge-flagged">Flagged</span></p>
+                    <p>Reviewed by: {{ record.reviewed_by }} on {{ record.reviewed_at[:10] }}</p>
+                {% endif %}
+
+                <hr>
+
+                <form method="post" action="{{ url_for('admin_record_detail', record_id=record.id) }}">
+                    <div class="form-group">
+                        <label for="review_notes">Review Notes</label>
+                        <textarea id="review_notes" name="review_notes" rows="3"
+                                  placeholder="Optional notes about this entry...">{{ record.review_notes or '' }}</textarea>
+                    </div>
+
+                    <div class="review-buttons">
+                        <button type="submit" name="action" value="approve" class="btn btn-success btn-block">
+                            &#9989; Approve
+                        </button>
+                        <button type="submit" name="action" value="flag" class="btn btn-warning btn-block">
+                            &#9888;&#65039; Flag for Review
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="sidebar-card">
+                <h3>Blockchain Record</h3>
+                <p>This entry is permanently recorded on the tamper-evident blockchain.</p>
+                {% if record.block_hash %}
+                    <p class="hash-preview"><strong>Hash:</strong> {{ record.block_hash }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

@@ -27,8 +27,9 @@ wheels/
 instance/
 .webassets-cache
 
-# Database (keep structure, ignore local data? Actually let's keep the seeded DB for now)
-# data/*.db
+# Database — local SQLite, not tracked in git
+data/*.db
+data/*.db-journal
 
 # OS
 .DS_Store
@@ -40,6 +41,6 @@ Thumbs.db
 *.swp
 *.swo
 
-# Uploads (local dev files)
+# Uploads (user-submitted photos — local dev files)
 static/uploads/*
 !static/uploads/.gitkeep

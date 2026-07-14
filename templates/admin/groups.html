@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#128109; Community Groups</h1>
+    <p>Customize the knowledge wheel for specific communities, clans, tribes, villages, or schools.</p>
+    <div class="admin-actions">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Dashboard</a>
+        <a href="{{ url_for('admin_logout') }}" class="btn btn-danger">Logout</a>
+    </div>
+</section>
+
+<section class="content-section">
+    <h2>&#128218; Existing Groups</h2>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Region</th>
+                <th>Languages</th>
+                <th>Map Center</th>
+                <th>Colors</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for group in groups %}
+            <tr>
+                <td>{{ group.id }}</td>
+                <td>{{ group.name }}</td>
+                <td>{{ group.group_type or '-' }}</td>
+                <td>{{ group.region or '-' }}</td>
+                <td>{{ group.native_language or '-' }}</td>
+                <td>{{ '%.2f'|format(group.map_center_lat) }}, {{ '%.2f'|format(group.map_center_lng) }} (zoom {{ group.map_zoom }})</td>
+                <td>
+                    <span style="background: {{ group.primary_color }}; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">Primary</span>
+                    <span style="background: {{ group.accent_color }}; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin-left: 0.25rem;">Accent</span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section class="content-section">
+    <h2>&#10133; Create New Group</h2>
+    <form method="post" action="{{ url_for('admin_add_group') }}" class="entry-form">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="name">Group Name *</label>
+                <input type="text" id="name" name="name" required
+                       placeholder="e.g., Yupik Communities of the Yukon">
+            </div>
+            <div class="form-group">
+                <label for="group_type">Group Type</label>
+                <select id="group_type" name="group_type">
+                    <option value="clan">Clan</option>
+                    <option value="tribe">Tribe</option>
+                    <option value="village">Village</option>
+                    <option value="school">School</option>
+                    <option value="network">Network</option>
+                    <option value="community">Community</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="2"
+                      placeholder="Brief description of this group..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="native_language">Native Language(s)</label>
+            <input type="text" id="native_language" name="native_language"
+                   placeholder="e.g., Yupik, Inupiaq, Dena'ina">
+        </div>
+
+        <div class="form-group">
+            <label for="region">Geographic Region</label>
+            <input type="text" id="region" name="region"
+                   placeholder="e.g., Yukon-Kuskokwim Delta">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="map_center_lat">Map Center Latitude</label>
+                <input type="number" step="any" id="map_center_lat" name="map_center_lat"
+                       value="64.5">
+            </div>
+            <div class="form-group">
+                <label for="map_center_lng">Map Center Longitude</label>
+                <input type="number" step="any" id="map_center_lng" name="map_center_lng"
+                       value="-150.0">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="map_zoom">Map Zoom Level</label>
+            <input type="number" id="map_zoom" name="map_zoom"
+                   value="4" min="1" max="15">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="primary_color">Primary Color</label>
+                <input type="color" id="primary_color" name="primary_color" value="#2d5a3d">
+            </div>
+            <div class="form-group">
+                <label for="accent_color">Accent Color</label>
+                <input type="color" id="accent_color" name="accent_color" value="#c4a35a">
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-lg">&#128109; Create Group</button>
+        </div>
+        <p class="field-hint">All default knowledge categories will be activated for the new group. You can customize which categories appear for each group later.</p>
+    </form>
+</section>
+
+{% endblock %}
