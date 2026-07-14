@@ -1374,3 +1374,37 @@ footer p {
         text-decoration: none;
     }
 }
+
+/* ════════════════════════════════════════ */
+/* SEASON TABS                             */
+/* ════════════════════════════════════════ */
+
+.season-tabs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.season-tab {
+    background: var(--color-card);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 0.6rem 1.25rem;
+    text-decoration: none;
+    color: var(--color-text);
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.season-tab:hover {
+    border-color: var(--color-primary);
+    text-decoration: none;
+}
+
+.season-tab.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}

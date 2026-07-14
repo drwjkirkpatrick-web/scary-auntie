@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#128279; Plant Uses by Group</h1>
+    <p>Cross-reference: which communities use which plants for what purposes.</p>
+</section>
+
+<section class="search-bar">
+    <form method="get" action="{{ url_for('plant_uses') }}">
+        <select name="group_id" class="search-input" style="max-width: 200px;">
+            <option value="">All Groups</option>
+            {% for g in groups %}
+            <option value="{{ g.id }}" {% if current_group == g.id %}selected{% endif %}>{{ g.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="category" class="search-input" style="max-width: 200px;">
+            <option value="">All Categories</option>
+            {% for cat in categories %}
+            <option value="{{ cat }}" {% if current_category == cat %}selected{% endif %}>{{ cat|capitalize }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">Filter</button>
+    </form>
+</section>
+
+{% if summary %}
+<section class="content-section">
+    <h2>&#128202; Use Categories Summary</h2>
+    <div class="stats-bar">
+        {% for s in summary %}
+        <div class="stat-card">
+            <div class="stat-number">{{ s.count }}</div>
+            <div class="stat-label">{{ s.use_category|capitalize }}<br><small>{{ s.plant_count }} plants</small></div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if session.user_id %}
+<section class="content-section">
+    <details class="filter-panel">
+        <summary>&#10133; Record a Plant Use</summary>
+        <form method="post" action="{{ url_for('admin_add_plant_use') }}" class="entry-form" style="margin-top: 1rem;">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="plant_id">Plant ID *</label>
+                    <input type="number" id="plant_id" name="plant_id" required placeholder="e.g., 1">
+                </div>
+                <div class="form-group">
+                    <label for="group_id">Group (optional)</label>
+                    <select id="group_id" name="group_id">
+                        <option value="">-- No specific group --</option>
+                        {% for g in groups %}
+                        <option value="{{ g.id }}">{{ g.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="use_category">Use Category *</label>
+                    <select id="use_category" name="use_category" required>
+                        {% for cat in categories %}
+                        <option value="{{ cat }}">{{ cat|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="season">Season</label>
+                    <input type="text" id="season" name="season" placeholder="e.g., Summer">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="use_detail">Use Detail</label>
+                <textarea id="use_detail" name="use_detail" rows="2"
+                          placeholder="How is this plant used?"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="source">Source</label>
+                <input type="text" id="source" name="source" placeholder="e.g., Kari 1987">
+            </div>
+            <button type="submit" class="btn btn-primary">Record Use</button>
+        </form>
+    </details>
+</section>
+{% endif %}
+
+<section class="content-section">
+    {% if uses %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Plant</th>
+                <th>Group</th>
+                <th>Category</th>
+                <th>Detail</th>
+                <th>Season</th>
+                <th>Source</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in uses %}
+            <tr>
+                <td><a href="{{ url_for('plant_detail', plant_id=u.plant_id) }}">{{ u.plant_english_name or 'Unknown' }}</a></td>
+                <td>{{ u.group_name or '-' }}</td>
+                <td><span class="badge badge-approved">{{ u.use_category|capitalize }}</span></td>
+                <td>{{ u.use_detail or '-' }}</td>
+                <td>{{ u.season or '-' }}</td>
+                <td>{{ u.source or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>No plant use records yet. {% if session.user_id %}Add the first one above!{% else %}Ask a teacher to add uses.{% endif %}</p>
+    </div>
+    {% endif %}
+</section>
+
+{% endblock %}

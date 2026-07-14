@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#129493; Elders &amp; Knowledge Holders</h1>
+    <p>Respecting those who carry the knowledge. Profiles are shared with consent.</p>
+</section>
+
+{% if session.user_id %}
+<section class="content-section">
+    <details class="filter-panel">
+        <summary>&#10133; Add Elder / Knowledge Holder Profile</summary>
+        <form method="post" action="{{ url_for('admin_add_elder') }}" class="entry-form" style="margin-top: 1rem;">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="name">Name *</label>
+                    <input type="text" id="name" name="name" required placeholder="Elder's name">
+                </div>
+                <div class="form-group">
+                    <label for="community">Community</label>
+                    <input type="text" id="community" name="community" placeholder="e.g., Nome">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="role">Role / Title</label>
+                    <input type="text" id="role" name="role" placeholder="e.g., Elder, Hunter, Healer">
+                </div>
+                <div class="form-group">
+                    <label for="birth_year">Birth Year (optional)</label>
+                    <input type="number" id="birth_year" name="birth_year" placeholder="1940">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="languages">Languages</label>
+                    <input type="text" id="languages" name="languages" placeholder="e.g., Yupik, English">
+                </div>
+                <div class="form-group">
+                    <label for="region">Region</label>
+                    <input type="text" id="region" name="region" placeholder="e.g., Yukon-Kuskokwim Delta">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="bio">Biography</label>
+                <textarea id="bio" name="bio" rows="4" placeholder="Share their story and knowledge..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="consent_level">Consent Level</label>
+                <select id="consent_level" name="consent_level">
+                    <option value="public">Public (visible to everyone)</option>
+                    <option value="community">Community (visible to group members)</option>
+                    <option value="restricted">Restricted (admin only)</option>
+                </select>
+                <p class="field-hint">Always obtain consent before adding a profile. Respect privacy and cultural protocols.</p>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Profile</button>
+        </form>
+    </details>
+</section>
+{% endif %}
+
+<section class="content-section">
+    {% if elders %}
+    <div class="records-list">
+        {% for elder in elders %}
+        <div class="record-card">
+            <div class="record-header">
+                <h3><a href="{{ url_for('elder_detail', elder_id=elder.id) }}">{{ elder.name }}</a></h3>
+            </div>
+            <p class="record-meta">
+                {% if elder.community %}<strong>Community:</strong> {{ elder.community }}<br>{% endif %}
+                {% if elder.role %}<strong>Role:</strong> {{ elder.role }}<br>{% endif %}
+                {% if elder.languages %}<strong>Languages:</strong> {{ elder.languages }}<br>{% endif %}
+                {% if elder.region %}<strong>Region:</strong> {{ elder.region }}{% endif %}
+            </p>
+            {% if elder.bio %}
+            <p class="record-observation">{{ elder.bio[:200] }}{% if elder.bio|length > 200 %}...{% endif %}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No elder profiles yet. {% if session.user_id %}Add one above — always with consent.{% else %}Ask a teacher to add profiles.{% endif %}</p>
+    </div>
+    {% endif %}
+</section>
+
+{% endblock %}

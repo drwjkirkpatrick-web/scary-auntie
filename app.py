@@ -42,6 +42,11 @@ from database import (
     get_user_by_username, create_user, get_all_users,
     update_plant, get_audit_logs, log_audit,
     export_plants_csv, export_records_csv, export_plants_json,
+    get_seasonal_calendar,
+    add_glossary_term, get_glossary_terms, get_glossary_count,
+    add_elder_profile, get_elder_profiles, get_elder_by_id,
+    add_plant_use, get_plant_uses, get_use_categories_summary,
+    add_lesson_plan, get_lesson_plans, get_lesson_by_id,
     seed_default_categories, seed_default_group,
 )
 import seed_data
@@ -842,9 +847,235 @@ def admin_audit():
 
 @app.route("/gallery")
 def gallery():
-    """Photo gallery of approved observations — Improvement 9."""
+    """Photo gallery of approved observations."""
     photos = get_approved_photos(limit=24)
     return render_template("gallery.html", photos=photos)
+
+
+# ═══════════════════════════════════════════════════════════════
+# SEASONAL CALENDAR (Module 1)
+# ═══════════════════════════════════════════════════════════════
+
+@app.route("/calendar")
+def seasonal_calendar():
+    """Seasonal availability calendar — when plants are harvested/available."""
+    season = request.args.get("season", "")
+    plants = get_seasonal_calendar(season=season if season else None)
+    seasons = [
+        {"slug": "spring", "name": "Spring", "icon": "🌱",
+         "desc": "Breakup, first greens, early shoots"},
+        {"slug": "summer", "name": "Summer", "icon": "☀️",
+         "desc": "Berry picking, gathering, long days"},
+        {"slug": "fall", "name": "Fall", "icon": "🍂",
+         "desc": "Harvest, berries, roots, preparation for winter"},
+        {"slug": "winter", "name": "Winter", "icon": "❄️",
+         "desc": "Stored foods, preserved medicines, storytelling season"},
+    ]
+    return render_template("calendar.html", plants=plants, season=season,
+                           seasons=seasons)
+
+
+# ═══════════════════════════════════════════════════════════════
+# GLOSSARY / DICTIONARY (Module 3)
+# ═══════════════════════════════════════════════════════════════
+
+@app.route("/glossary")
+def glossary():
+    """Native language glossary / dictionary."""
+    search = request.args.get("search", "").strip()
+    language = request.args.get("language", "").strip()
+    terms = get_glossary_terms(search=search or None,
+                               language=language or None)
+    total = get_glossary_count()
+    return render_template("glossary.html", terms=terms, search=search,
+                           language=language, total=total)
+
+
+@app.route("/admin/glossary/add", methods=["POST"])
+@role_required("teacher")
+def admin_add_glossary_term():
+    """Add a glossary term (teacher/admin)."""
+    term = request.form.get("term", "").strip()
+    definition = request.form.get("definition", "").strip()
+    language = request.form.get("language", "").strip() or None
+    plant_id = request.form.get("plant_id", "").strip()
+
+    if not term or not definition:
+        flash("Term and definition are required.", "error")
+        return redirect(url_for("glossary"))
+
+    pid = int(plant_id) if plant_id.isdigit() else None
+    add_glossary_term(term, definition, language, pid,
+                      session.get("display_name"))
+    log_audit("add_glossary_term", "glossary", None,
+              session.get("display_name"), f"Added term '{term}'")
+    flash(f"Term '{term}' added to glossary.", "success")
+    return redirect(url_for("glossary"))
+
+
+# ═══════════════════════════════════════════════════════════════
+# ELDER / KNOWLEDGE-HOLDER PROFILES (Module 4)
+# ═══════════════════════════════════════════════════════════════
+
+@app.route("/elders")
+def elders():
+    """Elder and knowledge-holder profiles."""
+    profiles = get_elder_profiles(consent_filter=True)
+    return render_template("elders.html", elders=profiles)
+
+
+@app.route("/elders/<int:elder_id>")
+def elder_detail(elder_id):
+    """View a single elder's profile."""
+    elder = get_elder_by_id(elder_id)
+    if not elder:
+        flash("Profile not found.", "error")
+        return redirect(url_for("elders"))
+    # Respect consent level
+    if elder.get("consent_level") == "restricted" and "user_id" not in session:
+        flash("This profile is restricted.", "error")
+        return redirect(url_for("elders"))
+    return render_template("elder_detail.html", elder=elder)
+
+
+@app.route("/admin/elders/add", methods=["POST"])
+@role_required("teacher")
+def admin_add_elder():
+    """Add an elder profile (teacher/admin)."""
+    name = request.form.get("name", "").strip()
+    community = request.form.get("community", "").strip() or None
+    role = request.form.get("role", "").strip() or None
+    bio = request.form.get("bio", "").strip() or None
+    birth_year = request.form.get("birth_year", "").strip()
+    languages = request.form.get("languages", "").strip() or None
+    region = request.form.get("region", "").strip() or None
+    consent_level = request.form.get("consent_level", "public").strip()
+
+    if not name:
+        flash("Name is required.", "error")
+        return redirect(url_for("elders"))
+
+    by = int(birth_year) if birth_year.isdigit() else None
+    add_elder_profile(name, community, role, bio, by, languages, region,
+                      consent_level=consent_level)
+    log_audit("add_elder", "elders", None, session.get("display_name"),
+              f"Added elder profile for '{name}'")
+    flash(f"Elder profile for '{name}' added.", "success")
+    return redirect(url_for("elders"))
+
+
+# ═══════════════════════════════════════════════════════════════
+# CROSS-REFERENCE: GROUP ↔ PLANT USES (Module 5)
+# ═══════════════════════════════════════════════════════════════
+
+@app.route("/uses")
+def plant_uses():
+    """Cross-reference: which groups use which plants for what."""
+    group_id = request.args.get("group_id", "").strip()
+    use_category = request.args.get("category", "").strip()
+    gid = int(group_id) if group_id.isdigit() else None
+    uses = get_plant_uses(group_id=gid, use_category=use_category or None)
+    summary = get_use_categories_summary()
+    groups = get_all_groups()
+    categories = ["food", "medicinal", "fiber", "dye", "tool",
+                  "spiritual", "construction", "other"]
+    return render_template("uses.html", uses=uses, summary=summary,
+                           groups=groups, categories=categories,
+                           current_group=gid, current_category=use_category)
+
+
+@app.route("/admin/uses/add", methods=["POST"])
+@role_required("teacher")
+def admin_add_plant_use():
+    """Add a plant use entry (teacher/admin)."""
+    plant_id = request.form.get("plant_id", "").strip()
+    group_id = request.form.get("group_id", "").strip()
+    use_category = request.form.get("use_category", "").strip()
+    use_detail = request.form.get("use_detail", "").strip() or None
+    season = request.form.get("season", "").strip() or None
+    source = request.form.get("source", "").strip() or None
+
+    if not plant_id or not use_category:
+        flash("Plant and use category are required.", "error")
+        return redirect(url_for("plant_uses"))
+
+    pid = int(plant_id) if plant_id.isdigit() else None
+    gid = int(group_id) if group_id.isdigit() else None
+    add_plant_use(pid, gid, use_category, use_detail, season, source)
+    log_audit("add_plant_use", "plant_uses", None,
+              session.get("display_name"),
+              f"Added use '{use_category}' for plant {pid}")
+    flash("Plant use recorded.", "success")
+    return redirect(url_for("plant_uses"))
+
+
+# ═══════════════════════════════════════════════════════════════
+# CURRICULUM / LESSON PLANS (Module 7)
+# ═══════════════════════════════════════════════════════════════
+
+@app.route("/curriculum")
+def curriculum():
+    """Browse lesson plans and curriculum resources."""
+    grade = request.args.get("grade", "").strip()
+    subject = request.args.get("subject", "").strip()
+    lessons = get_lesson_plans(grade=grade or None, subject=subject or None)
+    return render_template("curriculum.html", lessons=lessons,
+                           grade=grade, subject=subject)
+
+
+@app.route("/curriculum/<int:lesson_id>")
+def lesson_detail(lesson_id):
+    """View a single lesson plan."""
+    lesson = get_lesson_by_id(lesson_id)
+    if not lesson:
+        flash("Lesson plan not found.", "error")
+        return redirect(url_for("curriculum"))
+    # Resolve linked plants
+    linked_plants = []
+    if lesson.get("plant_ids"):
+        for pid_str in lesson["plant_ids"].split(","):
+            pid = pid_str.strip()
+            if pid.isdigit():
+                p = get_plant_by_id(int(pid))
+                if p:
+                    linked_plants.append(p)
+    return render_template("lesson_detail.html", lesson=lesson,
+                           linked_plants=linked_plants)
+
+
+@app.route("/admin/curriculum/add", methods=["GET", "POST"])
+@role_required("teacher")
+def admin_add_lesson():
+    """Add a lesson plan (teacher/admin)."""
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        grade_level = request.form.get("grade_level", "").strip()
+        subject = request.form.get("subject", "").strip() or None
+        duration = request.form.get("duration", "").strip() or None
+        description = request.form.get("description", "").strip() or None
+        objectives = request.form.get("objectives", "").strip() or None
+        materials = request.form.get("materials", "").strip() or None
+        activities = request.form.get("activities", "").strip() or None
+        assessment = request.form.get("assessment", "").strip() or None
+        plant_ids = request.form.get("plant_ids", "").strip() or None
+        created_by = session.get("display_name")
+
+        if not title or not grade_level:
+            flash("Title and grade level are required.", "error")
+            return redirect(url_for("admin_add_lesson"))
+
+        lesson_id = add_lesson_plan(
+            title, grade_level, subject, duration, description,
+            objectives, materials, activities, assessment,
+            plant_ids, created_by
+        )
+        log_audit("add_lesson", "lesson_plans", lesson_id,
+                  session.get("display_name"), f"Added lesson '{title}'")
+        flash(f"Lesson plan '{title}' added.", "success")
+        return redirect(url_for("curriculum"))
+
+    plants = get_all_plants(verified_only=True)
+    return render_template("admin/add_lesson.html", plants=plants, user=session)
 
 
 # ═══════════════════════════════════════════════════════════════

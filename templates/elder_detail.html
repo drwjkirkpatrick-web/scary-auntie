@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#129493; {{ elder.name }}</h1>
+    {% if elder.role %}<p>{{ elder.role }}</p>{% endif %}
+</section>
+
+<section class="plant-detail">
+    <div class="detail-grid">
+        <div class="detail-main">
+            {% if elder.bio %}
+            <div class="detail-section">
+                <h2>&#128221; Biography</h2>
+                <div class="observation-text">{{ elder.bio }}</div>
+            </div>
+            {% endif %}
+
+            {% if elder.community %}
+            <div class="detail-section">
+                <h2>&#127968; Community</h2>
+                <p>{{ elder.community }}</p>
+            </div>
+            {% endif %}
+
+            {% if elder.languages %}
+            <div class="detail-section">
+                <h2>&#127760; Languages</h2>
+                <p>{{ elder.languages }}</p>
+            </div>
+            {% endif %}
+
+            {% if elder.region %}
+            <div class="detail-section">
+                <h2>&#128205; Region</h2>
+                <p>{{ elder.region }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="detail-sidebar">
+            <div class="sidebar-card">
+                <h3>&#128279; Profile Info</h3>
+                {% if elder.birth_year %}
+                    <p><strong>Birth Year:</strong> {{ elder.birth_year }}</p>
+                {% endif %}
+                <p><strong>Consent Level:</strong>
+                    {% if elder.consent_level == 'public' %}Public{% endif %}
+                    {% if elder.consent_level == 'community' %}Community{% endif %}
+                    {% if elder.consent_level == 'restricted' %}Restricted{% endif %}
+                </p>
+            </div>
+            <div class="sidebar-card">
+                <h3>&#9888;&#65039; Cultural Protocol</h3>
+                <p>This profile is shared with the consent of the knowledge holder or their family. Please respect cultural protocols when referencing this knowledge.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="back-link">
+    <a href="{{ url_for('elders') }}">&#8592; Back to all Elders</a>
+</div>
+
+{% endblock %}

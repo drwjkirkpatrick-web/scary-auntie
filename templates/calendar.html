@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#127745; Seasonal Calendar</h1>
+    <p>When plants are available and harvested throughout the year.</p>
+</section>
+
+<section class="content-section">
+    <div class="season-tabs">
+        <a href="{{ url_for('seasonal_calendar') }}" class="season-tab {% if not season %}active{% endif %}">
+            &#128260; All Seasons
+        </a>
+        {% for s in seasons %}
+        <a href="{{ url_for('seasonal_calendar', season=s.slug) }}"
+           class="season-tab {% if season == s.slug %}active{% endif %}">
+            {{ s.icon }} {{ s.name }}
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if season %}
+    {% for s in seasons %}
+    {% if s.slug == season %}
+    <p class="section-intro">{{ s.icon }} {{ s.desc }}</p>
+    {% endif %}
+    {% endfor %}
+    {% else %}
+    <p class="section-intro">Plants available across all seasons. Click a season above to filter.</p>
+    {% endif %}
+</section>
+
+<section class="plants-grid">
+    {% for plant in plants %}
+    <a href="{{ url_for('plant_detail', plant_id=plant.id) }}" class="plant-card">
+        <div class="plant-card-header">
+            <h3>{{ plant.english_name }}</h3>
+            {% if plant.season_start or plant.season_end %}
+            <span class="plant-badge verified">{{ plant.season_start or '?' }}&ndash;{{ plant.season_end or '?' }}</span>
+            {% else %}
+            <span class="plant-badge verified">&#9989;</span>
+            {% endif %}
+        </div>
+        <div class="plant-card-body">
+            <p class="plant-latin"><em>{{ plant.latin_binomial }}</em></p>
+            {% if plant.native_alaskan_name %}
+                <p class="plant-native">{{ plant.native_alaskan_name }}</p>
+            {% endif %}
+            {% if plant.traditional_uses %}
+                <p class="plant-uses">{{ plant.traditional_uses[:120] }}{% if plant.traditional_uses|length > 120 %}...{% endif %}</p>
+            {% endif %}
+        </div>
+    </a>
+    {% else %}
+    <div class="empty-state">
+        <p>No plants found for this season. Try "All Seasons" or add season data to plants.</p>
+    </div>
+    {% endfor %}
+</section>
+
+{% endblock %}

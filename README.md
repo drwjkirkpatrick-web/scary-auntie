@@ -9,60 +9,115 @@ scary-auntie is a Flask-based web application that enables communities to record
 ## Architecture — Hub of the Wheel
 
 ```
-                    ┌─────────┐
-                    │  WEATHER │
-                    └────┬─────┘
-                         │
-         ┌──────┐  ┌─────┴─────┐  ┌───────┐
-         │STORIES│──┤ BOTANICALS├──│ANIMALS│
-         └──────┘  └─────┬─────┘  └───────┘
-                         │
-              ┌──────────┼──────────┐
-              │          │          │
-         ┌────┴───┐ ┌───┴───┐ ┌────┴───┐
-         │PLACES  │ │CRAFTS │ │  ...   │
-         └────────┘ └───────┘ └────────┘
+                        ┌─────────┐
+                        │ GLOSSARY │
+                        └────┬─────┘
+                             │
+   ┌───────┐  ┌────────┐  ┌──┴──────┐  ┌───────┐
+   │ELDERS │  │CALENDAR│  │BOTANICAL│  │ USES  │
+   └───┬───┘  └───┬────┘  └────┬────┘  └───┬───┘
+       │          │            │            │
+       │     ┌────┴────┐  ┌────┴────┐  ┌────┴────┐
+       │     │ WEATHER │  │ STORIES │  │ANIMALS │
+       │     └─────────┘  └─────────┘  └─────────┘
+       │
+  ┌────┴─────┐
+  │CURRICULUM│
+  └──────────┘
 ```
 
-- **Plants (Botanicals)** = the HUB. The prepopulated, verified reference database of 250 Alaskan Native botanicals. Every other category can link back to specific plants.
-- **Knowledge Categories** = the SPOKES. Extensible topics: animals, weather, stories & oral history, place names, crafts, and more. Each group activates the categories relevant to their community.
-- **Knowledge Records** = observations within any category, contributed by community members (children, youth, elders) and reviewed by teachers/admins.
-- **Groups** = community customization. Each clan, tribe, village, or school can customize their name, languages, geographic territory, map center, branding colors, and which categories they use.
+- **Plants (Botanicals)** = the HUB. The prepopulated, verified reference database of 250 Alaskan Native botanicals. Every other module connects back to specific plants.
+- **Knowledge Categories** = the SPOKES. Extensible topics: animals, weather, stories & oral history, place names, crafts, and more.
+- **Knowledge Records** = observations within any category, contributed by community members and reviewed by teachers/admins.
+- **Groups** = community customization. Each clan, tribe, village, or school can customize their name, languages, territory, map center, branding colors, and which categories they use.
 
-## Features
+## Modules
 
-### Public Site (for children, youth, elders)
-- **Browse Plants**: 250 verified Alaskan Native botanicals with Native names, Latin binomials, and English names
-- **Knowledge Wheel**: Visual overview of all knowledge categories with observation counts
-- **Add Observation**: Unified entry form for any knowledge category, with optional plant link
-- **Interactive Map**: Explore approved observations across Alaska
-- **Three-Name System**: Every plant supports Native name, Latin binomial, and English name
-- **Category Browsing**: View observations by knowledge category (botanicals, animals, weather, etc.)
+### Core Botanical Database (The Hub)
+- **250 verified plants** with three-name system (Native/Latin/English)
+- Search by name, family, use type (medicinal/food/tea/tool/spiritual)
+- Plant typeahead search for 250+ plants with keyboard navigation
+- Print-friendly plant detail pages
+- Admin: add, edit, export (CSV/JSON) plants
+- Pagination (24/page) on all plant lists
 
-### Teacher/Admin Backend
-- **Dashboard**: Overview stats, pending reviews, blockchain status, recent records
-- **Review Records**: Approve or flag community submissions across all categories
-- **Manage Plants**: Add new verified botanicals (with pagination + search for 250+ plants)
-- **Categories**: Create and manage knowledge categories (spokes of the wheel)
-- **Groups**: Create community groups with custom branding, languages, and territory
-- **Blockchain Monitor**: Verify integrity of the entire chain
-- **User Management**: Create teacher and admin accounts with group assignment
+### Knowledge Categories (Spokes)
+- 6 default categories: botanicals (hub), animals, weather, stories, places, crafts
+- Admin-creatable custom categories
+- Browse observations by category
+- Category counts on the Knowledge Wheel
+
+### Seasonal Calendar
+- Plants grouped by seasonal availability (spring/summer/fall/winter)
+- Text-mines `traditional_uses` and `parts_used` fields for seasonal keywords
+- `season_start` / `season_end` columns on plants table for explicit seasonal data
+- Filterable by season with visual tabs
+
+### Plant Uses Cross-Reference
+- Records how specific groups/clans use specific plants for what purposes
+- Use categories: food, medicinal, fiber, dye, tool, spiritual, construction, other
+- Filterable by group and use category
+- Summary dashboard with use-category counts
+- Comparable to Moerman's Native American Ethnobotany Database
+
+### Glossary / Dictionary
+- Native language terms with definitions
+- Optional link to specific plants from the hub
+- Search by term or language
+- Teacher/admin can add terms
+- Comparable to FirstVoices dictionary entries
+
+### Elder / Knowledge-Holder Profiles
+- Biographies of elders and knowledge holders
+- Consent-based access control: public, community, restricted
+- Records community, role, languages, region, birth year
+- Respects cultural protocols — restricted profiles are admin-only
+- Comparable to ANKN elder biographies and Mukurtu digital heritage
+
+### Curriculum / Lesson Plans
+- Educational lesson plans linked to specific plants
+- Fields: grade level, subject, duration, objectives, materials, activities, assessment
+- Filterable by grade and subject
+- Print-friendly lesson detail pages
+- Comparable to ANKN curriculum resources
+
+### Cultural Protocols
+- `cultural_protocol` field on plants and knowledge records
+- Access control for sacred/restricted knowledge
+- Respects Indigenous data sovereignty principles
+- Comparable to Mukurtu CMS protocol-based access
+
+### Community Observations
+- Unified observation form for any knowledge category
+- Optional plant link back to the hub
+- Photo upload with validation
+- GPS coordinates with geolocation helper
+- Teacher/admin review system with bulk approve/flag
+- Blockchain-recorded for tamper evidence
+
+### Interactive Map
+- Leaflet-based map of approved observations
+- XSS-safe popups (all user content escaped)
+- GPS coordinates for geotagged observations
+
+### Photo Gallery
+- Grid of approved observation photos
+- Captions with plant and category info
 
 ### Blockchain Integrity
 - Every database operation is hashed into a SHA-256 blockchain
 - Each block references the previous block's hash
 - Built-in verification detects any tampering
-- Atomic transactions — plant + block are committed together
-- Author attribution preserved for all scraped/cited data
+- Atomic transactions — plant + block committed together
+- All new modules (glossary, elders, plant_uses, lesson_plans) are blockchain-integrated
 
 ### Security
-- Passwords hashed with Werkzeug's `generate_password_hash` (salted PBKDF2)
-- Session ID regenerated on login (prevents session fixation)
-- All API endpoints require authentication (except public category list)
-- Debug mode off by default (set `FLASK_DEBUG=1` to enable)
-- XSS-safe map popups (all user content escaped)
-- File upload validation (extension whitelist + secure filename)
-- Configurable admin password via `ADMIN_PASSWORD` environment variable
+- Salted password hashing (Werkzeug PBKDF2)
+- Session ID regeneration on login
+- All API endpoints require authentication (except public categories)
+- Debug mode off by default
+- File upload validation + secure filename
+- Cultural protocol access control
 
 ## Prepopulated Database
 
@@ -95,6 +150,23 @@ scary-auntie is a Flask-based web application that enables communities to record
 | `crafts` | Crafts & Material Culture | 🪢 | Spoke |
 
 Custom categories can be created from the admin panel.
+
+## Gap Analysis — How scary-auntie Compares
+
+| Feature | scary-auntie | Moerman DB | Mukurtu | FirstVoices | ANKN |
+|---------|:---:|:---:|:---:|:---:|:---:|
+| Plant database with Native names | ✅ | ✅ | — | — | — |
+| Cross-reference tribe↔plant uses | ✅ | ✅ | — | — | — |
+| Seasonal calendar | ✅ | — | — | — | — |
+| Cultural protocols / access control | ✅ | — | ✅ | — | — |
+| Glossary / dictionary | ✅ | — | ✅ | ✅ | — |
+| Elder/knowledge-holder profiles | ✅ | — | ✅ | — | ✅ |
+| Curriculum / lesson plans | ✅ | — | — | — | ✅ |
+| Blockchain integrity | ✅ | — | — | — | — |
+| Community groups/clans | ✅ | ✅ | ✅ | — | — |
+| Interactive map | ✅ | — | — | — | — |
+| Photo gallery | ✅ | — | ✅ | — | — |
+| Open source / self-hosted | ✅ | — | ✅ | — | — |
 
 ## Installation
 
@@ -129,8 +201,8 @@ Default admin credentials (change in production):
 
 ```
 scary-auntie/
-├── app.py                  # Flask application — routes, auth, API
-├── database.py             # Database + blockchain layer + migrations
+├── app.py                  # Flask application — routes, auth, API, modules
+├── database.py             # Database + blockchain + all module functions
 ├── seed_data.py            # 250 verified Alaskan botanical seed entries
 ├── dedup_plants.py         # One-time deduplication script (8 merge pairs)
 ├── requirements.txt        # Python dependencies
@@ -138,30 +210,41 @@ scary-auntie/
 │   └── scary_auntie.db     # SQLite database (not tracked in git)
 ├── static/
 │   ├── css/
-│   │   └── style.css       # Application styles
+│   │   └── style.css       # Application styles + print styles
 │   └── uploads/            # User-submitted photos
 └── templates/
-    ├── base.html           # Base template
-    ├── index.html          # Public landing — wheel overview
-    ├── plants.html         # Plant browser (paginated)
-    ├── plant_detail.html   # Plant detail page
-    ├── add_observation.html # Unified observation form
+    ├── base.html           # Base template with nav
+    ├── index.html          # Public landing — wheel + recent observations
+    ├── plants.html         # Plant browser (paginated + filters)
+    ├── plant_detail.html   # Plant detail (print-friendly)
+    ├── add_observation.html # Unified observation form (typeahead)
     ├── map.html            # Interactive map
     ├── knowledge_wheel.html # Category overview
     ├── category_view.html  # Browse observations by category
     ├── record_detail.html  # Single observation detail
+    ├── calendar.html       # Seasonal availability calendar
+    ├── glossary.html       # Native language dictionary
+    ├── elders.html         # Elder/knowledge-holder profiles
+    ├── elder_detail.html   # Single elder profile
+    ├── uses.html           # Cross-reference: group↔plant uses
+    ├── curriculum.html     # Lesson plan browser
+    ├── lesson_detail.html  # Single lesson plan (print-friendly)
+    ├── gallery.html        # Photo gallery
     └── admin/              # Teacher/admin templates
         ├── login.html
         ├── dashboard.html
         ├── entries.html       # Legacy botanical entries
         ├── entry_detail.html  # Legacy entry review
-        ├── records.html       # New knowledge records
+        ├── records.html       # Knowledge records (bulk review)
         ├── record_detail.html # New record review
         ├── plants.html        # Plant management (paginated)
+        ├── edit_plant.html    # Plant editor
         ├── add_plant.html
         ├── categories.html    # Knowledge category management
         ├── groups.html        # Community group management
+        ├── add_lesson.html    # Lesson plan editor
         ├── blockchain.html
+        ├── audit.html         # Audit log viewer
         └── users.html
 ```
 
@@ -173,6 +256,10 @@ scary-auntie/
 - **knowledge_entries** — Legacy botanical observations (backward compatible)
 - **groups** — Community/clan/tribe customization
 - **group_category_activations** — Which categories each group has activated
+- **glossary** — Native language terms and definitions
+- **elders** — Elder/knowledge-holder profiles with consent-based access
+- **plant_uses** — Cross-reference: which groups use which plants for what
+- **lesson_plans** — Curriculum resources linked to plants
 - **users** — Teacher/admin accounts with optional group assignment
 - **block_chain** — Tamper-evident hash chain for all operations
 - **audit_log** — Activity logging
@@ -184,7 +271,11 @@ scary-auntie/
 3. Customize the map center coordinates and zoom for your territory
 4. Choose your branding colors (primary + accent)
 5. **Activate Categories** — Select which knowledge categories your group uses
-6. **Add Observations** — Community members contribute through the unified form
+6. **Record Plant Uses** — Document how your community uses specific plants
+7. **Add Glossary Terms** — Preserve your Native language plant names and terms
+8. **Add Elder Profiles** — Honor knowledge holders (always with consent)
+9. **Create Lesson Plans** — Build curriculum tied to your local plants
+10. **Add Observations** — Community members contribute through the unified form
 
 ## License
 

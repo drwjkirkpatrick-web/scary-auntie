@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#128274; Glossary</h1>
+    <p>Native language terms and definitions ({{ total }} terms).</p>
+</section>
+
+<section class="search-bar">
+    <form method="get" action="{{ url_for('glossary') }}">
+        <input type="text" name="search" value="{{ search }}" placeholder="Search terms..."
+               class="search-input">
+        <input type="text" name="language" value="{{ language }}" placeholder="Language"
+               class="search-input" style="max-width: 150px;">
+        <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+</section>
+
+{% if session.user_id %}
+<section class="content-section">
+    <details class="filter-panel">
+        <summary>&#10133; Add a Glossary Term</summary>
+        <form method="post" action="{{ url_for('admin_add_glossary_term') }}" class="entry-form" style="margin-top: 1rem;">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="term">Term *</label>
+                    <input type="text" id="term" name="term" required placeholder="e.g., Aqpik">
+                </div>
+                <div class="form-group">
+                    <label for="language">Language</label>
+                    <input type="text" id="language" name="language" placeholder="e.g., Yupik">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="definition">Definition *</label>
+                <textarea id="definition" name="definition" rows="2" required
+                          placeholder="What does this term mean?"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="plant_id">Linked Plant (optional)</label>
+                <input type="number" id="plant_id" name="plant_id" placeholder="Plant ID">
+            </div>
+            <button type="submit" class="btn btn-primary">Add Term</button>
+        </form>
+    </details>
+</section>
+{% endif %}
+
+<section class="content-section">
+    {% if terms %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Term</th>
+                <th>Language</th>
+                <th>Definition</th>
+                <th>Linked Plant</th>
+                <th>Added By</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in terms %}
+            <tr>
+                <td><strong>{{ t.term }}</strong></td>
+                <td>{{ t.language or '-' }}</td>
+                <td>{{ t.definition }}</td>
+                <td>
+                    {% if t.plant_english_name %}
+                        <a href="{{ url_for('plant_detail', plant_id=t.plant_id) }}">{{ t.plant_english_name }}</a>
+                    {% else %}-{% endif %}
+                </td>
+                <td>{{ t.added_by or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>No glossary terms yet. {% if session.user_id %}Add the first one above!{% else %}Ask a teacher to add terms.{% endif %}</p>
+    </div>
+    {% endif %}
+</section>
+
+{% endblock %}

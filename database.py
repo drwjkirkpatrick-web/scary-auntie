@@ -249,6 +249,86 @@ def init_database():
         )
     """)
 
+    # --- GLOSSARY TABLE (Native language dictionary) ---
+    # Stores Native language terms, their definitions, and optional plant links.
+    # Comparable to FirstVoices dictionary entries.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS glossary (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            term TEXT NOT NULL,
+            definition TEXT NOT NULL,
+            language TEXT,
+            plant_id INTEGER,
+            added_by TEXT,
+            created_at TEXT NOT NULL,
+            block_hash TEXT,
+            FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE SET NULL
+        )
+    """)
+
+    # --- ELDERS TABLE (Knowledge-holder profiles) ---
+    # Biographies of elders and knowledge holders, with consent-based access.
+    # Comparable to ANKN elder biographies and Mukurtu digital heritage items.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS elders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            community TEXT,
+            role TEXT,
+            bio TEXT,
+            birth_year INTEGER,
+            languages TEXT,
+            region TEXT,
+            photo_path TEXT,
+            consent_level TEXT DEFAULT 'public',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            block_hash TEXT
+        )
+    """)
+
+    # --- PLANT_USES TABLE (Cross-reference: group ↔ plant ↔ use) ---
+    # Records how specific groups/clans use specific plants, for what purpose.
+    # Comparable to Moerman's Native American Ethnobotany Database structure.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS plant_uses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plant_id INTEGER NOT NULL,
+            group_id INTEGER,
+            use_category TEXT NOT NULL,
+            use_detail TEXT,
+            season TEXT,
+            source TEXT,
+            created_at TEXT NOT NULL,
+            block_hash TEXT,
+            FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE,
+            FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE SET NULL
+        )
+    """)
+
+    # --- LESSON_PLANS TABLE (Curriculum resources) ---
+    # Educational lesson plans linked to specific plants and knowledge categories.
+    # Comparable to ANKN curriculum resources.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lesson_plans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            grade_level TEXT,
+            subject TEXT,
+            duration TEXT,
+            description TEXT,
+            objectives TEXT,
+            materials TEXT,
+            activities TEXT,
+            assessment TEXT,
+            plant_ids TEXT,
+            created_by TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            block_hash TEXT
+        )
+    """)
+
     # ── MIGRATIONS: add columns to existing tables ──
     # CREATE TABLE IF NOT EXISTS won't add columns to tables that already exist.
     # We check each column and ALTER TABLE if missing. SQLite doesn't support
@@ -259,8 +339,362 @@ def init_database():
         cursor.execute("ALTER TABLE users ADD COLUMN group_id INTEGER REFERENCES groups(id) ON DELETE SET NULL")
         print("Migration: added group_id column to users table")
 
+    # Add cultural protocol columns to plants (access control for sacred/restricted knowledge)
+    cursor.execute("PRAGMA table_info(plants)")
+    plant_cols = {r[1] for r in cursor.fetchall()}
+    if "cultural_protocol" not in plant_cols:
+        cursor.execute("ALTER TABLE plants ADD COLUMN cultural_protocol TEXT")
+        print("Migration: added cultural_protocol column to plants table")
+    if "season_start" not in plant_cols:
+        cursor.execute("ALTER TABLE plants ADD COLUMN season_start TEXT")
+        print("Migration: added season_start column to plants table")
+    if "season_end" not in plant_cols:
+        cursor.execute("ALTER TABLE plants ADD COLUMN season_end TEXT")
+        print("Migration: added season_end column to plants table")
+
+    # Add cultural protocol columns to knowledge_records
+    cursor.execute("PRAGMA table_info(knowledge_records)")
+    record_cols = {r[1] for r in cursor.fetchall()}
+    if "cultural_protocol" not in record_cols:
+        cursor.execute("ALTER TABLE knowledge_records ADD COLUMN cultural_protocol TEXT")
+        print("Migration: added cultural_protocol column to knowledge_records table")
+
     conn.commit()
     conn.close()
+
+
+# ═══════════════════════════════════════════════════════════════
+# SEASONAL CALENDAR
+# ═══════════════════════════════════════════════════════════════
+
+def get_seasonal_calendar(season: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Get plants grouped by seasonal availability.
+    season: 'spring', 'summer', 'fall', 'winter', or None for all.
+    Uses season_start/season_end text fields (e.g. 'June', 'August').
+    Falls back to traditional_uses text mining if season fields are empty.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT id, english_name, latin_binomial, native_alaskan_name,
+               native_language, family, traditional_uses, parts_used,
+               season_start, season_end, image_url
+        FROM plants
+        WHERE verified = 1
+    """
+    params: list = []
+
+    if season:
+        season_map = {
+            "spring": ["March", "April", "May", "June", "spring", "Spring", "breakup"],
+            "summer": ["June", "July", "August", "summer", "Summer"],
+            "fall": ["September", "October", "November", "fall", "autumn", "Fall", "harvest", "berry"],
+            "winter": ["December", "January", "February", "winter", "Winter", "stored", "preserved"],
+        }
+        keywords = season_map.get(season, [])
+        like_clauses = []
+        for kw in keywords:
+            like_clauses.append("COALESCE(season_start, '') LIKE ?")
+            like_clauses.append("COALESCE(season_end, '') LIKE ?")
+            like_clauses.append("COALESCE(traditional_uses, '') LIKE ?")
+            like_clauses.append("COALESCE(parts_used, '') LIKE ?")
+            params.extend([f"%{kw}%"] * 4)
+        query += " AND (" + " OR ".join(like_clauses) + ")"
+
+    query += " ORDER BY english_name ASC"
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+# ═══════════════════════════════════════════════════════════════
+# GLOSSARY / DICTIONARY
+# ═══════════════════════════════════════════════════════════════
+
+def add_glossary_term(term: str, definition: str,
+                      language: Optional[str] = None,
+                      plant_id: Optional[int] = None,
+                      added_by: Optional[str] = None) -> int:
+    """Add a glossary/dictionary term."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    now = _now()
+    cursor.execute("""
+        INSERT INTO glossary (term, definition, language, plant_id, added_by, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (term, definition, language, plant_id, added_by, now))
+    term_id = cursor.lastrowid
+    data = {"table": "glossary", "id": term_id, "term": term, "language": language}
+    block_hash = add_block_within_conn(conn, "glossary", term_id, "INSERT", data, added_by)
+    cursor.execute("UPDATE glossary SET block_hash = ? WHERE id = ?", (block_hash, term_id))
+    conn.commit()
+    conn.close()
+    return term_id
+
+
+def get_glossary_terms(search: Optional[str] = None,
+                       language: Optional[str] = None,
+                       limit: Optional[int] = None,
+                       offset: int = 0) -> List[Dict[str, Any]]:
+    """Get glossary terms, optionally filtered."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = """
+        SELECT g.*, p.english_name as plant_english_name,
+               p.latin_binomial as plant_latin
+        FROM glossary g
+        LEFT JOIN plants p ON g.plant_id = p.id
+        WHERE 1=1
+    """
+    params: list = []
+    if search:
+        query += " AND (g.term LIKE ? OR g.definition LIKE ?)"
+        like = f"%{search}%"
+        params.extend([like, like])
+    if language:
+        query += " AND g.language LIKE ?"
+        params.append(f"%{language}%")
+    query += " ORDER BY g.term ASC"
+    if limit:
+        query += " LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_glossary_count() -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM glossary")
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
+
+
+# ═══════════════════════════════════════════════════════════════
+# ELDER / KNOWLEDGE-HOLDER PROFILES
+# ═══════════════════════════════════════════════════════════════
+
+def add_elder_profile(name: str,
+                      community: Optional[str] = None,
+                      role: Optional[str] = None,
+                      bio: Optional[str] = None,
+                      birth_year: Optional[int] = None,
+                      languages: Optional[str] = None,
+                      region: Optional[str] = None,
+                      photo_path: Optional[str] = None,
+                      consent_level: str = "public") -> int:
+    """
+    Add an elder/knowledge-holder profile.
+    consent_level: 'public' (visible to all), 'community' (visible only to group members),
+                   'restricted' (visible only to admins).
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    now = _now()
+    cursor.execute("""
+        INSERT INTO elders
+        (name, community, role, bio, birth_year, languages, region,
+         photo_path, consent_level, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (name, community, role, bio, birth_year, languages, region,
+          photo_path, consent_level, now, now))
+    elder_id = cursor.lastrowid
+    data = {"table": "elders", "id": elder_id, "name": name, "community": community}
+    block_hash = add_block_within_conn(conn, "elders", elder_id, "INSERT", data)
+    cursor.execute("UPDATE elders SET block_hash = ? WHERE id = ?", (block_hash, elder_id))
+    conn.commit()
+    conn.close()
+    return elder_id
+
+
+def get_elder_profiles(consent_filter: bool = True,
+                       limit: Optional[int] = None,
+                       offset: int = 0) -> List[Dict[str, Any]]:
+    """Get elder profiles. If consent_filter, only show public/community profiles."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM elders"
+    if consent_filter:
+        query += " WHERE consent_level IN ('public', 'community')"
+    query += " ORDER BY name ASC"
+    if limit:
+        query += " LIMIT ? OFFSET ?"
+        cursor.execute(query, (limit, offset))
+    else:
+        cursor.execute(query)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_elder_by_id(elder_id: int) -> Optional[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM elders WHERE id = ?", (elder_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+# ═══════════════════════════════════════════════════════════════
+# CROSS-REFERENCE: GROUP ↔ PLANT USES
+# ═══════════════════════════════════════════════════════════════
+
+def add_plant_use(plant_id: int, group_id: Optional[int],
+                  use_category: str,
+                  use_detail: Optional[str] = None,
+                  season: Optional[str] = None,
+                  source: Optional[str] = None) -> int:
+    """
+    Add a specific plant use entry, cross-referencing a group/clan.
+    use_category: 'food', 'medicinal', 'fiber', 'dye', 'tool', 'spiritual', 'construction', 'other'
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    now = _now()
+    cursor.execute("""
+        INSERT INTO plant_uses
+        (plant_id, group_id, use_category, use_detail, season, source, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (plant_id, group_id, use_category, use_detail, season, source, now))
+    use_id = cursor.lastrowid
+    data = {"table": "plant_uses", "id": use_id, "plant_id": plant_id,
+            "use_category": use_category, "group_id": group_id}
+    block_hash = add_block_within_conn(conn, "plant_uses", use_id, "INSERT", data)
+    cursor.execute("UPDATE plant_uses SET block_hash = ? WHERE id = ?", (block_hash, use_id))
+    conn.commit()
+    conn.close()
+    return use_id
+
+
+def get_plant_uses(plant_id: Optional[int] = None,
+                   group_id: Optional[int] = None,
+                   use_category: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Get plant uses, optionally filtered by plant, group, or use category."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = """
+        SELECT pu.*, p.english_name as plant_english_name,
+               p.latin_binomial, p.native_alaskan_name,
+               g.name as group_name
+        FROM plant_uses pu
+        LEFT JOIN plants p ON pu.plant_id = p.id
+        LEFT JOIN groups g ON pu.group_id = g.id
+        WHERE 1=1
+    """
+    params: list = []
+    if plant_id:
+        query += " AND pu.plant_id = ?"
+        params.append(plant_id)
+    if group_id:
+        query += " AND pu.group_id = ?"
+        params.append(group_id)
+    if use_category:
+        query += " AND pu.use_category = ?"
+        params.append(use_category)
+    query += " ORDER BY p.english_name ASC, pu.use_category ASC"
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_use_categories_summary() -> List[Dict[str, Any]]:
+    """Get counts of plant uses by category — for the cross-reference overview."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT use_category, COUNT(*) as count, COUNT(DISTINCT plant_id) as plant_count
+        FROM plant_uses
+        GROUP BY use_category
+        ORDER BY count DESC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+# ═══════════════════════════════════════════════════════════════
+# CURRICULUM / LESSON PLANS
+# ═══════════════════════════════════════════════════════════════
+
+def add_lesson_plan(title: str,
+                    grade_level: str,
+                    subject: Optional[str] = None,
+                    duration: Optional[str] = None,
+                    description: Optional[str] = None,
+                    objectives: Optional[str] = None,
+                    materials: Optional[str] = None,
+                    activities: Optional[str] = None,
+                    assessment: Optional[str] = None,
+                    plant_ids: Optional[str] = None,
+                    created_by: Optional[str] = None) -> int:
+    """
+    Add a lesson plan / curriculum resource.
+    plant_ids: comma-separated plant IDs to link this lesson to specific plants.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    now = _now()
+    cursor.execute("""
+        INSERT INTO lesson_plans
+        (title, grade_level, subject, duration, description, objectives,
+         materials, activities, assessment, plant_ids, created_by, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (title, grade_level, subject, duration, description, objectives,
+          materials, activities, assessment, plant_ids, created_by, now, now))
+    lesson_id = cursor.lastrowid
+    data = {"table": "lesson_plans", "id": lesson_id, "title": title,
+            "grade_level": grade_level}
+    block_hash = add_block_within_conn(conn, "lesson_plans", lesson_id, "INSERT", data, created_by)
+    cursor.execute("UPDATE lesson_plans SET block_hash = ? WHERE id = ?", (block_hash, lesson_id))
+    conn.commit()
+    conn.close()
+    return lesson_id
+
+
+def get_lesson_plans(grade: Optional[str] = None,
+                     subject: Optional[str] = None,
+                     plant_id: Optional[int] = None,
+                     limit: Optional[int] = None,
+                     offset: int = 0) -> List[Dict[str, Any]]:
+    """Get lesson plans, optionally filtered by grade, subject, or linked plant."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM lesson_plans WHERE 1=1"
+    params: list = []
+    if grade:
+        query += " AND grade_level LIKE ?"
+        params.append(f"%{grade}%")
+    if subject:
+        query += " AND subject LIKE ?"
+        params.append(f"%{subject}%")
+    if plant_id:
+        query += " AND (',' || plant_ids || ',') LIKE ?"
+        params.append(f"%,{plant_id},%")
+    query += " ORDER BY title ASC"
+    if limit:
+        query += " LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_lesson_by_id(lesson_id: int) -> Optional[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM lesson_plans WHERE id = ?", (lesson_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 
 # ═══════════════════════════════════════════════════════════════

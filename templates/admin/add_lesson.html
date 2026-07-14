@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#10133; Add Lesson Plan</h1>
+    <div class="admin-actions">
+        <a href="{{ url_for('curriculum') }}" class="btn btn-secondary">Back to Curriculum</a>
+        <a href="{{ url_for('admin_logout') }}" class="btn btn-danger">Logout</a>
+    </div>
+</section>
+
+<section class="form-section">
+    <form method="post" action="{{ url_for('admin_add_lesson') }}" class="entry-form">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="title">Title *</label>
+                <input type="text" id="title" name="title" required placeholder="e.g., Berry Identification Walk">
+            </div>
+            <div class="form-group">
+                <label for="grade_level">Grade Level *</label>
+                <input type="text" id="grade_level" name="grade_level" required placeholder="e.g., 3-5, K-2, 6-8">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="subject">Subject</label>
+                <input type="text" id="subject" name="subject" placeholder="e.g., Science, Social Studies">
+            </div>
+            <div class="form-group">
+                <label for="duration">Duration</label>
+                <input type="text" id="duration" name="duration" placeholder="e.g., 45 minutes, 2 hours">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="2"
+                      placeholder="Brief overview of the lesson..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="objectives">Learning Objectives</label>
+            <textarea id="objectives" name="objectives" rows="3"
+                      placeholder="What will students learn?"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="materials">Materials Needed</label>
+            <textarea id="materials" name="materials" rows="3"
+                      placeholder="List of materials..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="activities">Activities</label>
+            <textarea id="activities" name="activities" rows="5"
+                      placeholder="Step-by-step activities..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="assessment">Assessment</label>
+            <textarea id="assessment" name="assessment" rows="2"
+                      placeholder="How will learning be assessed?"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="plant_ids">Linked Plant IDs (comma-separated)</label>
+            <input type="text" id="plant_ids" name="plant_ids"
+                   placeholder="e.g., 1, 2, 5, 10">
+            <p class="field-hint">Link this lesson to specific plants from the hub database.</p>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-lg">&#128190; Create Lesson Plan</button>
+        </div>
+    </form>
+</section>
+
+{% endblock %}

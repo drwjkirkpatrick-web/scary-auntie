@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#127979; {{ lesson.title }}</h1>
+    <p>
+        Grade: <strong>{{ lesson.grade_level or 'Any' }}</strong>
+        {% if lesson.subject %} | Subject: <strong>{{ lesson.subject }}</strong>{% endif %}
+        {% if lesson.duration %} | Duration: <strong>{{ lesson.duration }}</strong>{% endif %}
+    </p>
+</section>
+
+<section class="plant-detail">
+    <div class="detail-main">
+        {% if lesson.description %}
+        <div class="detail-section">
+            <h2>&#128221; Description</h2>
+            <div class="observation-text">{{ lesson.description }}</div>
+        </div>
+        {% endif %}
+
+        {% if lesson.objectives %}
+        <div class="detail-section">
+            <h2>&#127919; Learning Objectives</h2>
+            <div class="observation-text">{{ lesson.objectives }}</div>
+        </div>
+        {% endif %}
+
+        {% if lesson.materials %}
+        <div class="detail-section">
+            <h2>&#128230; Materials Needed</h2>
+            <div class="observation-text">{{ lesson.materials }}</div>
+        </div>
+        {% endif %}
+
+        {% if lesson.activities %}
+        <div class="detail-section">
+            <h2>&#127757; Activities</h2>
+            <div class="observation-text">{{ lesson.activities }}</div>
+        </div>
+        {% endif %}
+
+        {% if lesson.assessment %}
+        <div class="detail-section">
+            <h2>&#9989; Assessment</h2>
+            <div class="observation-text">{{ lesson.assessment }}</div>
+        </div>
+        {% endif %}
+
+        {% if linked_plants %}
+        <div class="detail-section">
+            <h2>&#127807; Linked Plants</h2>
+            <div class="plants-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">
+                {% for p in linked_plants %}
+                <a href="{{ url_for('plant_detail', plant_id=p.id) }}" class="plant-card">
+                    <div class="plant-card-header">
+                        <h3>{{ p.english_name }}</h3>
+                    </div>
+                    <div class="plant-card-body">
+                        <p class="plant-latin"><em>{{ p.latin_binomial }}</em></p>
+                        {% if p.native_alaskan_name %}
+                        <p class="plant-native">{{ p.native_alaskan_name }}</p>
+                        {% endif %}
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<div class="back-link">
+    <a href="{{ url_for('curriculum') }}">&#8592; Back to Curriculum</a>
+    <button onclick="window.print()" class="btn btn-secondary btn-sm" style="float: right;">
+        &#128424; Print Lesson
+    </button>
+</div>
+
+{% endblock %}

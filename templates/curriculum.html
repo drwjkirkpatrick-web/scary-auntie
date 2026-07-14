@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#127979; Curriculum &amp; Lesson Plans</h1>
+    <p>Educational resources tied to the botanical database.</p>
+    {% if session.user_id %}
+    <div class="admin-actions">
+        <a href="{{ url_for('admin_add_lesson') }}" class="btn btn-primary">+ Add Lesson Plan</a>
+    </div>
+    {% endif %}
+</section>
+
+<section class="search-bar">
+    <form method="get" action="{{ url_for('curriculum') }}">
+        <input type="text" name="grade" value="{{ grade }}" placeholder="Grade level..."
+               class="search-input" style="max-width: 200px;">
+        <input type="text" name="subject" value="{{ subject }}" placeholder="Subject..."
+               class="search-input" style="max-width: 200px;">
+        <button type="submit" class="btn btn-primary">Filter</button>
+    </form>
+</section>
+
+<section class="content-section">
+    {% if lessons %}
+    <div class="records-list">
+        {% for lesson in lessons %}
+        <div class="record-card">
+            <div class="record-header">
+                <h3>
+                    <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}">{{ lesson.title }}</a>
+                </h3>
+                <span class="record-date">Grade: {{ lesson.grade_level or 'Any' }}</span>
+            </div>
+            <p class="record-meta">
+                {% if lesson.subject %}<strong>Subject:</strong> {{ lesson.subject }}{% endif %}
+                {% if lesson.duration %}<br><strong>Duration:</strong> {{ lesson.duration }}{% endif %}
+            </p>
+            {% if lesson.description %}
+            <p class="record-observation">{{ lesson.description[:200] }}{% if lesson.description|length > 200 %}...{% endif %}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No lesson plans yet. {% if session.user_id %}<a href="{{ url_for('admin_add_lesson') }}" class="btn btn-primary">Create the first one</a>{% else %}Ask a teacher to add lesson plans.{% endif %}</p>
+    </div>
+    {% endif %}
+</section>
+
+{% endblock %}
