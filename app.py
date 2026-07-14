@@ -20,7 +20,7 @@ import secrets
 from datetime import datetime, timezone
 from functools import wraps
 from flask import (Flask, render_template, request, redirect, url_for,
-                   flash, jsonify, session, abort)
+                   flash, jsonify, session, abort, Response, make_response)
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -28,15 +28,20 @@ from database import (
     init_database, get_connection,
     add_knowledge_entry, add_knowledge_record, add_block, verify_chain,
     get_all_plants, get_plant_by_id, get_plant_count, get_plant_categories,
-    get_all_entries, review_entry, review_record,
+    get_plant_use_types, get_plant_languages,
+    get_all_entries, review_entry, review_record, bulk_review_records,
     get_all_records, get_record_by_id, get_records_by_category,
     get_record_count, get_approved_records_with_coords,
+    get_recent_approved_records, get_recent_approved_entries,
+    get_approved_photos,
     get_all_categories, get_category_by_slug, get_category_by_id,
     get_category_counts, add_category,
     get_all_groups, get_group_by_id, add_group, update_group,
     activate_group_category, get_group_categories,
     get_stats, get_blockchain_summary,
     get_user_by_username, create_user, get_all_users,
+    update_plant, get_audit_logs, log_audit,
+    export_plants_csv, export_records_csv, export_plants_json,
     seed_default_categories, seed_default_group,
 )
 import seed_data
@@ -109,13 +114,26 @@ def index():
     categories = get_all_categories()
     category_counts = get_category_counts()
     groups = get_all_groups()
+    # Improvement 7: Recent approved observations on homepage
+    recent_records = get_recent_approved_records(limit=6)
+    recent_legacy = get_recent_approved_entries(limit=6)
+    # Merge and sort by date
+    recent = []
+    for r in recent_records:
+        recent.append({**r, "source": "record"})
+    for e in recent_legacy:
+        recent.append({**e, "source": "legacy", "category_slug": "botanicals",
+                       "category_name": "Botanical Knowledge", "category_icon": "🌿"})
+    recent.sort(key=lambda x: x.get("entry_date", ""), reverse=True)
+    recent = recent[:6]
     return render_template("index.html", stats=stats, categories=categories,
-                           category_counts=category_counts, groups=groups)
+                           category_counts=category_counts, groups=groups,
+                           recent=recent)
 
 
 @app.route("/plants")
 def plant_list():
-    """Browse all verified plants with pagination + search."""
+    """Browse all verified plants with pagination + search + filters."""
     search = request.args.get("search", "").strip()
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", PER_PAGE, type=int)
@@ -126,13 +144,17 @@ def plant_list():
                             limit=per_page, offset=offset)
     total = get_plant_count() if not search else len(get_all_plants(search=search, verified_only=True))
     families = get_plant_categories()
+    # Improvement 6: Use-type and language filters for students
+    use_types = get_plant_use_types()
+    languages = get_plant_languages()
 
     # Simple pagination calculation
     pages = max(1, (total + per_page - 1) // per_page)
 
     return render_template("plants.html", plants=plants, search=search,
                            page=page, pages=pages, per_page=per_page,
-                           total=total, families=families)
+                           total=total, families=families,
+                           use_types=use_types, languages=languages)
 
 
 @app.route("/plants/<int:plant_id>")
@@ -332,6 +354,7 @@ def admin_login():
             session["username"] = user["username"]
             session["role"] = user["role"]
             session["display_name"] = user["display_name"]
+            log_audit("login", "users", user["id"], user["display_name"], "User logged in")
             flash(f"Welcome, {user['display_name']}!")
             return redirect(url_for("admin_dashboard"))
         else:
@@ -697,11 +720,131 @@ def admin_add_user():
     try:
         create_user(username, display_name,
                     generate_password_hash(password), role, group_id=gid)
+        log_audit("create_user", "users", None, session.get("display_name"),
+                  f"Created user '{username}' with role '{role}'")
         flash(f"User '{display_name}' created successfully.", "success")
     except ValueError as e:
         flash(str(e), "error")
 
     return redirect(url_for("admin_users"))
+
+
+# ── Improvement 1: Plant edit capability ──
+
+@app.route("/admin/plants/<int:plant_id>/edit", methods=["GET", "POST"])
+@role_required("teacher")
+def admin_edit_plant(plant_id):
+    """Edit an existing plant's details."""
+    plant = get_plant_by_id(plant_id)
+    if not plant:
+        flash("Plant not found.", "error")
+        return redirect(url_for("admin_plants"))
+
+    if request.method == "POST":
+        fields = {
+            "latin_binomial": request.form.get("latin_binomial", "").strip() or None,
+            "english_name": request.form.get("english_name", "").strip() or None,
+            "native_alaskan_name": request.form.get("native_alaskan_name", "").strip() or None,
+            "native_language": request.form.get("native_language", "").strip() or None,
+            "family": request.form.get("family", "").strip() or None,
+            "description": request.form.get("description", "").strip() or None,
+            "habitat": request.form.get("habitat", "").strip() or None,
+            "traditional_uses": request.form.get("traditional_uses", "").strip() or None,
+            "parts_used": request.form.get("parts_used", "").strip() or None,
+            "preparation": request.form.get("preparation", "").strip() or None,
+            "cautions": request.form.get("cautions", "").strip() or None,
+            "source_author": request.form.get("source_author", "").strip() or None,
+            "source_url": request.form.get("source_url", "").strip() or None,
+        }
+        # Remove None values so we don't overwrite with NULL
+        fields = {k: v for k, v in fields.items() if v is not None}
+
+        if not fields.get("latin_binomial") or not fields.get("english_name"):
+            flash("Latin binomial and English name are required.", "error")
+            return redirect(url_for("admin_edit_plant", plant_id=plant_id))
+
+        update_plant(plant_id, **fields)
+        log_audit("update_plant", "plants", plant_id, session.get("display_name"),
+                  f"Updated plant '{fields.get('english_name', plant['english_name'])}'")
+        flash(f"Plant '{fields.get('english_name', plant['english_name'])}' updated.", "success")
+        return redirect(url_for("admin_plants"))
+
+    return render_template("admin/edit_plant.html", plant=plant, user=session)
+
+
+# ── Improvement 2: Bulk review records ──
+
+@app.route("/admin/records/bulk-review", methods=["POST"])
+@login_required
+def admin_bulk_review():
+    """Bulk approve or flag multiple records at once."""
+    action = request.form.get("bulk_action", "")
+    record_ids = request.form.getlist("record_ids")
+    notes = request.form.get("bulk_notes", "").strip() or None
+    reviewer = session.get("display_name", session.get("username", "Unknown"))
+
+    if action not in ("approve", "flag"):
+        flash("Invalid bulk action.", "error")
+        return redirect(url_for("admin_records"))
+
+    if not record_ids:
+        flash("No records selected for bulk review.", "error")
+        return redirect(url_for("admin_records"))
+
+    ids = [int(rid) for rid in record_ids if rid.isdigit()]
+    decision = 1 if action == "approve" else 2
+    bulk_review_records(ids, reviewer, decision, notes)
+    log_audit("bulk_review", "knowledge_records", len(ids),
+              reviewer, f"Bulk {action}d {len(ids)} records")
+
+    flash(f"Bulk {action}d {len(ids)} records.", "success")
+    return redirect(url_for("admin_records"))
+
+
+# ── Improvement 3: Data export ──
+
+@app.route("/admin/export/<datatype>")
+@role_required("teacher")
+def admin_export(datatype):
+    """Export data as CSV or JSON for offline use."""
+    if datatype == "plants-csv":
+        csv_data = export_plants_csv()
+        resp = make_response(csv_data)
+        resp.headers["Content-Type"] = "text/csv"
+        resp.headers["Content-Disposition"] = "attachment; filename=scary_auntie_plants.csv"
+        return resp
+    elif datatype == "plants-json":
+        json_data = export_plants_json()
+        resp = make_response(json_data)
+        resp.headers["Content-Type"] = "application/json"
+        resp.headers["Content-Disposition"] = "attachment; filename=scary_auntie_plants.json"
+        return resp
+    elif datatype == "records-csv":
+        csv_data = export_records_csv()
+        resp = make_response(csv_data)
+        resp.headers["Content-Type"] = "text/csv"
+        resp.headers["Content-Disposition"] = "attachment; filename=scary_auntie_records.csv"
+        return resp
+    else:
+        flash("Unknown export type.", "error")
+        return redirect(url_for("admin_dashboard"))
+
+
+# ── Improvement 5: Audit log viewer ──
+
+@app.route("/admin/audit")
+@role_required("admin")
+def admin_audit():
+    """View system audit log."""
+    logs = get_audit_logs(limit=100)
+    return render_template("admin/audit.html", logs=logs, user=session)
+
+
+@app.route("/gallery")
+def gallery():
+    """Photo gallery of approved observations — Improvement 9."""
+    photos = get_approved_photos(limit=24)
+    return render_template("gallery.html", photos=photos)
 
 
 # ═══════════════════════════════════════════════════════════════

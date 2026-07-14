@@ -10,59 +10,89 @@
         <a href="{{ url_for('admin_records', status='pending') }}" class="btn btn-secondary {% if status_filter == 'pending' %}active{% endif %}">Pending</a>
         <a href="{{ url_for('admin_records', status='approved') }}" class="btn btn-secondary {% if status_filter == 'approved' %}active{% endif %}">Approved</a>
         <a href="{{ url_for('admin_records', status='flagged') }}" class="btn btn-secondary {% if status_filter == 'flagged' %}active{% endif %}">Flagged</a>
+        <a href="{{ url_for('admin_export', datatype='records-csv') }}" class="btn btn-success">Export CSV</a>
         <a href="{{ url_for('admin_logout') }}" class="btn btn-danger">Logout</a>
     </div>
 </section>
 
 <section class="content-section">
-    <p>{{ total }} records</p>
+    <p>{{ total }} records &mdash; page {{ page }} of {{ pages }}</p>
+
+    {% if records %}
+    <!-- Improvement 2: Bulk review form -->
+    <form method="post" action="{{ url_for('admin_bulk_review') }}" id="bulk-form">
+        <div class="bulk-review-bar">
+            <span class="bulk-count">Selected: <span id="bulk-count">0</span></span>
+            <input type="text" name="bulk_notes" placeholder="Optional notes for all selected..."
+                   class="bulk-notes-input">
+            <button type="submit" name="bulk_action" value="approve" class="btn btn-success btn-sm"
+                    onclick="return confirm('Approve all selected records?')">
+                &#9989; Bulk Approve
+            </button>
+            <button type="submit" name="bulk_action" value="flag" class="btn btn-warning btn-sm"
+                    onclick="return confirm('Flag all selected records?')">
+                &#9888;&#65039; Bulk Flag
+            </button>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="select-all" onclick="toggleAll()"></th>
+                    <th>ID</th>
+                    <th>Recorder</th>
+                    <th>Category</th>
+                    <th>Title</th>
+                    <th>Plant</th>
+                    <th>Location</th>
+                    <th>Observation</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td><input type="checkbox" name="record_ids" value="{{ record.id }}" class="record-checkbox" onclick="updateCount()"></td>
+                    <td>{{ record.id }}</td>
+                    <td>{{ record.recorder_name }}{% if record.recorder_age %} ({{ record.recorder_age }}){% endif %}</td>
+                    <td>{{ record.category_name or '-' }}</td>
+                    <td>{{ record.title or '-' }}</td>
+                    <td>{{ record.plant_english_name or '-' }}</td>
+                    <td>
+                        {{ record.location_description or '-' }}
+                        {% if record.latitude and record.longitude %}
+                            <br><small>{{ '%.4f'|format(record.latitude) }}, {{ '%.4f'|format(record.longitude) }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ record.observation[:80] }}{% if record.observation|length > 80 %}...{% endif %}</td>
+                    <td>{{ record.entry_date[:10] }}</td>
+                    <td>
+                        {% if record.reviewed == 0 %}
+                            <span class="badge badge-pending">Pending</span>
+                        {% elif record.reviewed == 1 %}
+                            <span class="badge badge-approved">Approved</span>
+                        {% else %}
+                            <span class="badge badge-flagged">Flagged</span>
+                        {% endif %}
+                    </td>
+                    <td><a href="{{ url_for('admin_record_detail', record_id=record.id) }}" class="btn btn-sm">Review</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </form>
+    {% else %}
     <table class="data-table">
         <thead>
-            <tr>
-                <th>ID</th>
-                <th>Recorder</th>
-                <th>Category</th>
-                <th>Title</th>
-                <th>Plant</th>
-                <th>Location</th>
-                <th>Observation</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Action</th>
-            </tr>
+            <tr><th>ID</th><th>Recorder</th><th>Category</th><th>Title</th><th>Plant</th><th>Location</th><th>Observation</th><th>Date</th><th>Status</th><th>Action</th></tr>
         </thead>
         <tbody>
-            {% for record in records %}
-            <tr>
-                <td>{{ record.id }}</td>
-                <td>{{ record.recorder_name }}{% if record.recorder_age %} ({{ record.recorder_age }}){% endif %}</td>
-                <td>{{ record.category_name or '-' }}</td>
-                <td>{{ record.title or '-' }}</td>
-                <td>{{ record.plant_english_name or '-' }}</td>
-                <td>
-                    {{ record.location_description or '-' }}
-                    {% if record.latitude and record.longitude %}
-                        <br><small>{{ '%.4f'|format(record.latitude) }}, {{ '%.4f'|format(record.longitude) }}</small>
-                    {% endif %}
-                </td>
-                <td>{{ record.observation[:80] }}{% if record.observation|length > 80 %}...{% endif %}</td>
-                <td>{{ record.entry_date[:10] }}</td>
-                <td>
-                    {% if record.reviewed == 0 %}
-                        <span class="badge badge-pending">Pending</span>
-                    {% elif record.reviewed == 1 %}
-                        <span class="badge badge-approved">Approved</span>
-                    {% else %}
-                        <span class="badge badge-flagged">Flagged</span>
-                    {% endif %}
-                </td>
-                <td><a href="{{ url_for('admin_record_detail', record_id=record.id) }}" class="btn btn-sm">Review</a></td>
-            </tr>
-            {% else %}
             <tr><td colspan="10" class="empty-cell">No records found in this category.</td></tr>
-            {% endfor %}
         </tbody>
     </table>
+    {% endif %}
 </section>
 
 {% if pages > 1 %}
@@ -82,5 +112,17 @@
     {% endif %}
 </div>
 {% endif %}
+
+<script>
+function toggleAll() {
+    const checked = document.getElementById('select-all').checked;
+    document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = checked);
+    updateCount();
+}
+function updateCount() {
+    const count = document.querySelectorAll('.record-checkbox:checked').length;
+    document.getElementById('bulk-count').textContent = count;
+}
+</script>
 
 {% endblock %}

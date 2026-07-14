@@ -44,22 +44,41 @@
                    placeholder="How old are you?">
         </div>
 
-        <!-- Plant selector — only shown for botanical hub or when plants are relevant -->
+        <!-- Plant selector — Improvement 8: typeahead search for 250+ plants -->
         <div class="form-group" id="plant-selector">
-            <label for="plant_id">What plant is this related to? (optional)</label>
-            <select id="plant_id" name="plant_id">
+            <label for="plant_search">What plant is this related to? (optional)</label>
+            <input type="hidden" id="plant_id" name="plant_id" value="{{ preselect_plant_id }}">
+            <div class="typeahead-wrapper">
+                <input type="text" id="plant_search" class="search-input"
+                       placeholder="Start typing a plant name (English, Latin, or Native)..."
+                       value="{% if preselect_plant_id %}Loading...{% endif %}"
+                       autocomplete="off">
+                <div id="typeahead-results" class="typeahead-results"></div>
+            </div>
+            {% if preselect_plant_id %}
+            <p class="field-hint" id="plant-selected-hint">Plant pre-selected. Clear the search box to change it.</p>
+            {% else %}
+            <p class="field-hint" id="plant-selected-hint">Search for a plant by any name. Leave blank if not plant-related.</p>
+            {% endif %}
+        </div>
+
+        <!-- Fallback: keep a noscript select for accessibility -->
+        <noscript>
+        <div class="form-group">
+            <label for="plant_id_noscript">Plant (no JavaScript)</label>
+            <select id="plant_id_noscript" name="plant_id">
                 <option value="">-- Not plant-related / Other --</option>
                 {% for plant in plants %}
                     <option value="{{ plant.id }}"
                         {% if preselect_plant_id|int == plant.id %}selected{% endif %}>
                         {{ plant.english_name }}
                         {% if plant.native_alaskan_name %}| {{ plant.native_alaskan_name }}{% endif %}
-                        | <em>{{ plant.latin_binomial }}</em>
+                        | {{ plant.latin_binomial }}
                     </option>
                 {% endfor %}
             </select>
-            <p class="field-hint">Link this observation to a plant from the hub database (optional).</p>
         </div>
+        </noscript>
 
         <div class="form-group">
             <label for="native_name_used">What do <strong>you</strong> call this?</label>
@@ -156,6 +175,122 @@ function togglePlantField() {
         plantDiv.style.display = '';
     }
 }
+
+// ── Improvement 8: Plant typeahead search ──
+// Embed all plant data inline so we don't need an API call (the API requires auth)
+const allPlants = [
+    {% for plant in plants %}
+    {id: {{ plant.id }}, english: "{{ plant.english_name|replace('"', '\\"') }}",
+     latin: "{{ plant.latin_binomial|replace('"', '\\"') }}",
+     native: "{{ (plant.native_alaskan_name or '')|replace('"', '\\"') }}"},
+    {% endfor %}
+];
+
+const plantSearch = document.getElementById('plant_search');
+const plantIdHidden = document.getElementById('plant_id');
+const resultsDiv = document.getElementById('typeahead-results');
+const hintP = document.getElementById('plant-selected-hint');
+let highlightedIndex = -1;
+
+// If a plant was pre-selected, resolve its name
+if (plantIdHidden.value && plantIdHidden.value !== '') {
+    const pid = parseInt(plantIdHidden.value);
+    const found = allPlants.find(p => p.id === pid);
+    if (found) {
+        plantSearch.value = found.english + (found.native ? ' | ' + found.native : '');
+    }
+}
+
+function searchPlants(query) {
+    if (!query || query.length < 1) return [];
+    const q = query.toLowerCase();
+    return allPlants.filter(p =>
+        p.english.toLowerCase().includes(q) ||
+        p.latin.toLowerCase().includes(q) ||
+        p.native.toLowerCase().includes(q)
+    ).slice(0, 20);
+}
+
+function renderResults(results) {
+    if (results.length === 0) {
+        resultsDiv.classList.remove('show');
+        resultsDiv.innerHTML = '';
+        return;
+    }
+    resultsDiv.innerHTML = results.map((p, i) => `
+        <div class="typeahead-item" data-id="${p.id}" data-index="${i}">
+            <strong>${p.english}</strong>
+            ${p.native ? '<span class="ta-native"> | ' + p.native + '</span>' : ''}
+            <div class="ta-latin">${p.latin}</div>
+        </div>
+    `).join('');
+    resultsDiv.classList.add('show');
+    highlightedIndex = -1;
+}
+
+plantSearch.addEventListener('input', function() {
+    const results = searchPlants(this.value);
+    renderResults(results);
+    // Clear selection if user is still typing
+    if (this.value === '') {
+        plantIdHidden.value = '';
+        hintP.textContent = 'Search for a plant by any name. Leave blank if not plant-related.';
+    }
+});
+
+plantSearch.addEventListener('keydown', function(e) {
+    const items = resultsDiv.querySelectorAll('.typeahead-item');
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        highlightedIndex = Math.min(highlightedIndex + 1, items.length - 1);
+        updateHighlight(items);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        highlightedIndex = Math.max(highlightedIndex - 1, -1);
+        updateHighlight(items);
+    } else if (e.key === 'Enter' && highlightedIndex >= 0) {
+        e.preventDefault();
+        if (items[highlightedIndex]) {
+            selectPlant(items[highlightedIndex]);
+        }
+    } else if (e.key === 'Escape') {
+        resultsDiv.classList.remove('show');
+    }
+});
+
+function updateHighlight(items) {
+    items.forEach((item, i) => {
+        if (i === highlightedIndex) {
+            item.classList.add('highlighted');
+        } else {
+            item.classList.remove('highlighted');
+        }
+    });
+}
+
+function selectPlant(item) {
+    const id = item.dataset.id;
+    const found = allPlants.find(p => p.id == id);
+    if (found) {
+        plantSearch.value = found.english + (found.native ? ' | ' + found.native : '');
+        plantIdHidden.value = found.id;
+        hintP.textContent = 'Selected: ' + found.english + ' (' + found.latin + ')';
+    }
+    resultsDiv.classList.remove('show');
+}
+
+// Click to select
+resultsDiv.addEventListener('click', function(e) {
+    const item = e.target.closest('.typeahead-item');
+    if (item) selectPlant(item);
+});
+
+// Close results when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.typeahead-wrapper')) {
+        resultsDiv.classList.remove('show');
+    }
+});
 </script>
 
 {% endblock %}

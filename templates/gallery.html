@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-header">
+    <h1>&#128247; Photo Gallery</h1>
+    <p>Photos from approved community observations.</p>
+</section>
+
+{% if photos %}
+<div class="gallery-grid">
+    {% for photo in photos %}
+    <div class="gallery-item">
+        <img src="{{ url_for('static', filename=photo.photo_path) }}"
+             alt="Observation photo" loading="lazy">
+        <div class="gallery-caption">
+            <p><strong>{{ photo.title or photo.observation[:50] ~ '...' }}</strong></p>
+            <p class="gallery-meta">
+                                By {{ photo.recorder_name }}
+                                {% if photo.category_name %} &mdash; {{ photo.category_name }}{% endif %}
+                                <br>{{ photo.entry_date[:10] }}
+            </p>
+            {% if photo.plant_english_name %}
+                <p class="gallery-plant">&#127807; {{ photo.plant_english_name }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No photos have been approved yet.</p>
+    <a href="{{ url_for('add_observation') }}" class="btn btn-primary">
+        &#127793; Add an Observation with a Photo
+    </a>
+</div>
+{% endif %}
+
+{% endblock %}

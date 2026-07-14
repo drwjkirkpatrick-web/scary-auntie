@@ -115,4 +115,33 @@
 </section>
 {% endif %}
 
+{% if recent %}
+<section class="content-section">
+    <h2>&#128064; Recent Approved Observations</h2>
+    <div class="recent-observations">
+        {% for obs in recent %}
+        <div class="recent-obs-card">
+            {% if obs.category_icon %}<span class="recent-obs-icon">{{ obs.category_icon }}</span>{% endif %}
+            <div class="recent-obs-body">
+                <h4>
+                    {% if obs.source == 'legacy' %}
+                        {{ obs.observation[:60] }}...
+                    {% else %}
+                        {{ obs.title or obs.observation[:60] ~ '...' }}
+                    {% endif %}
+                </h4>
+                <p class="recent-obs-meta">
+                    By <strong>{{ obs.recorder_name }}</strong>
+                    {% if obs.recorder_age %} (age {{ obs.recorder_age }}){% endif %}
+                    {% if obs.category_name %} in {{ obs.category_name }}{% endif %}
+                    {% if obs.plant_english_name %} &mdash; {{ obs.plant_english_name }}{% endif %}
+                </p>
+                <p class="recent-obs-date">{{ obs.entry_date[:10] }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
 {% endblock %}

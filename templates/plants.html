@@ -34,6 +34,21 @@
 </section>
 {% endif %}
 
+{% if use_types %}
+<section class="content-section">
+    <details class="filter-panel">
+        <summary>&#127807; Filter by Use Type</summary>
+        <div class="family-tags">
+            {% for ut in use_types %}
+            <a href="{{ url_for('plant_list', search=ut.use_type) }}" class="family-tag">
+                {{ ut.use_type }} ({{ ut.count }})
+            </a>
+            {% endfor %}
+        </div>
+    </details>
+</section>
+{% endif %}
+
 <section class="plants-grid">
     {% for plant in plants %}
     <a href="{{ url_for('plant_detail', plant_id=plant.id) }}" class="plant-card">

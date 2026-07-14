@@ -609,6 +609,289 @@ def get_plant_categories() -> List[Dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+def update_plant(plant_id: int, **kwargs):
+    """
+    Update an existing plant's fields. Pass column names as keyword arguments.
+    Records the update on the blockchain atomically.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    now = _now()
+
+    # Always update updated_at
+    kwargs["updated_at"] = now
+
+    # Whitelist of allowed columns to prevent SQL injection
+    allowed = {"latin_binomial", "english_name", "native_alaskan_name",
+                "native_language", "family", "description", "habitat",
+                "traditional_uses", "parts_used", "preparation", "cautions",
+                "image_url", "verified", "source_author", "source_url", "updated_at"}
+    safe_kwargs = {k: v for k, v in kwargs.items() if k in allowed}
+
+    if not safe_kwargs:
+        conn.close()
+        return
+
+    set_clauses = ", ".join(f"{k} = ?" for k in safe_kwargs)
+    params = list(safe_kwargs.values()) + [plant_id]
+    cursor.execute(f"UPDATE plants SET {set_clauses} WHERE id = ?", params)
+
+    # Add blockchain block for the update
+    data = {
+        "table": "plants", "id": plant_id,
+        "action": "update",
+        "fields": list(safe_kwargs.keys())
+    }
+    block_hash = add_block_within_conn(conn, "plants", plant_id, "UPDATE", data)
+    cursor.execute("UPDATE plants SET block_hash = ? WHERE id = ?",
+                   (block_hash, plant_id))
+
+    conn.commit()
+    conn.close()
+
+
+def get_plant_use_types() -> List[Dict[str, Any]]:
+    """Get plant counts grouped by traditional use type — for filtering."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT
+            CASE
+                WHEN COALESCE(traditional_uses, '') LIKE '%medicinal%' OR COALESCE(traditional_uses, '') LIKE '%medicine%' THEN 'Medicinal'
+                WHEN COALESCE(traditional_uses, '') LIKE '%food%' OR COALESCE(traditional_uses, '') LIKE '%eaten%' THEN 'Food'
+                WHEN COALESCE(traditional_uses, '') LIKE '%tea%' THEN 'Tea'
+                WHEN COALESCE(traditional_uses, '') LIKE '%tool%' OR COALESCE(traditional_uses, '') LIKE '%craft%' THEN 'Tool/Craft'
+                WHEN COALESCE(traditional_uses, '') LIKE '%spiritual%' OR COALESCE(traditional_uses, '') LIKE '%ceremon%' THEN 'Spiritual'
+                WHEN COALESCE(traditional_uses, '') != '' THEN 'Other'
+                ELSE 'Unknown'
+            END as use_type,
+            COUNT(*) as count
+        FROM plants
+        WHERE verified = 1
+        GROUP BY use_type
+        ORDER BY count DESC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_plant_languages() -> List[Dict[str, Any]]:
+    """Get distinct Native languages from the plants table — for filtering."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT DISTINCT native_language
+        FROM plants
+        WHERE native_language IS NOT NULL AND native_language != ''
+        ORDER BY native_language ASC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_recent_approved_records(limit: int = 6) -> List[Dict[str, Any]]:
+    """Get most recent approved knowledge records — for homepage."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT kr.id, kr.title, kr.recorder_name, kr.recorder_age,
+               kr.location_description, kr.observation, kr.photo_path,
+               kr.entry_date, kr.native_name_used, kr.plant_id,
+               kc.slug as category_slug, kc.display_name as category_name,
+               kc.icon as category_icon,
+               p.english_name as plant_english_name
+        FROM knowledge_records kr
+        LEFT JOIN knowledge_categories kc ON kr.category_id = kc.id
+        LEFT JOIN plants p ON kr.plant_id = p.id
+        WHERE kr.reviewed = 1
+        ORDER BY kr.entry_date DESC
+        LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_recent_approved_entries(limit: int = 6) -> List[Dict[str, Any]]:
+    """Get most recent approved legacy entries — for homepage."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT ke.id, ke.recorder_name, ke.recorder_age,
+               ke.location_description, ke.observation, ke.photo_path,
+               ke.entry_date, ke.native_name_used, ke.plant_id,
+               p.english_name as plant_english_name
+        FROM knowledge_entries ke
+        LEFT JOIN plants p ON ke.plant_id = p.id
+        WHERE ke.reviewed = 1
+        ORDER BY ke.entry_date DESC
+        LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_approved_photos(limit: int = 24) -> List[Dict[str, Any]]:
+    """Get approved records that have photos — for the gallery page."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT kr.id, kr.title, kr.recorder_name, kr.photo_path,
+               kr.location_description, kr.observation, kr.entry_date,
+               kc.slug as category_slug, kc.display_name as category_name,
+               kc.icon as category_icon,
+               p.english_name as plant_english_name, p.id as plant_id
+        FROM knowledge_records kr
+        LEFT JOIN knowledge_categories kc ON kr.category_id = kc.id
+        LEFT JOIN plants p ON kr.plant_id = p.id
+        WHERE kr.reviewed = 1 AND kr.photo_path IS NOT NULL AND kr.photo_path != ''
+        ORDER BY kr.entry_date DESC
+        LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+
+    # Also check legacy entries for photos
+    cursor.execute("""
+        SELECT ke.id, ke.recorder_name, ke.photo_path,
+               ke.location_description, ke.observation, ke.entry_date,
+               p.english_name as plant_english_name, p.id as plant_id
+        FROM knowledge_entries ke
+        LEFT JOIN plants p ON ke.plant_id = p.id
+        WHERE ke.reviewed = 1 AND ke.photo_path IS NOT NULL AND ke.photo_path != ''
+        ORDER BY ke.entry_date DESC
+        LIMIT ?
+    """, (limit,))
+    legacy_rows = cursor.fetchall()
+
+    conn.close()
+    # Tag legacy entries so the template can build correct URLs
+    results = [dict(r) for r in rows]
+    for r in legacy_rows:
+        d = dict(r)
+        d["is_legacy"] = True
+        d["category_slug"] = "botanicals"
+        d["category_name"] = "Botanical Knowledge"
+        d["category_icon"] = "🌿"
+        results.append(d)
+
+    return results
+
+
+def bulk_review_records(record_ids: List[int], reviewer_name: str,
+                        decision: int, notes: Optional[str] = None):
+    """
+    Bulk review multiple knowledge records at once.
+    decision: 1 = approve, 2 = flag. Each gets its own blockchain block.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    now = _now()
+
+    for rid in record_ids:
+        cursor.execute("""
+            UPDATE knowledge_records
+            SET reviewed = ?, reviewed_by = ?, reviewed_at = ?, review_notes = ?
+            WHERE id = ?
+        """, (decision, reviewer_name, now, notes, rid))
+
+        data = {
+            "table": "knowledge_records", "id": rid,
+            "action": "bulk_review", "decision": decision,
+            "reviewer": reviewer_name, "notes": notes
+        }
+        add_block_within_conn(conn, "knowledge_records", rid, "UPDATE",
+                                data, reviewer_name)
+
+    conn.commit()
+    conn.close()
+
+
+def get_audit_logs(limit: int = 100) -> List[Dict[str, Any]]:
+    """Get recent audit log entries."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM audit_log ORDER BY timestamp DESC LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def log_audit(action: str, table_name: Optional[str] = None,
+              record_id: Optional[int] = None,
+              user_name: Optional[str] = None,
+              details: Optional[str] = None):
+    """Write an entry to the audit log."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO audit_log (action, table_name, record_id, user_name, details, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (action, table_name, record_id, user_name, details, _now()))
+    conn.commit()
+    conn.close()
+
+
+def export_plants_csv() -> str:
+    """Export all plants as CSV string."""
+    import csv
+    import io
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM plants ORDER BY english_name ASC")
+    rows = cursor.fetchall()
+    conn.close()
+
+    output = io.StringIO()
+    if rows:
+        writer = csv.DictWriter(output, fieldnames=rows[0].keys())
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(dict(row))
+    return output.getvalue()
+
+
+def export_records_csv() -> str:
+    """Export all knowledge records as CSV string."""
+    import csv
+    import io
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT kr.id, kr.title, kr.recorder_name, kr.recorder_age,
+               kr.location_description, kr.latitude, kr.longitude,
+               kr.observation, kr.native_name_used, kr.tags,
+               kr.photo_path, kr.entry_date, kr.reviewed,
+               kr.reviewed_by, kr.reviewed_at, kr.review_notes,
+               kc.display_name as category_name,
+               p.english_name as plant_name, p.latin_binomial
+        FROM knowledge_records kr
+        LEFT JOIN knowledge_categories kc ON kr.category_id = kc.id
+        LEFT JOIN plants p ON kr.plant_id = p.id
+        ORDER BY kr.entry_date DESC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+
+    output = io.StringIO()
+    if rows:
+        writer = csv.DictWriter(output, fieldnames=rows[0].keys())
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(dict(row))
+    return output.getvalue()
+
+
+def export_plants_json() -> str:
+    """Export all plants as JSON string."""
+    plants = get_all_plants()
+    return json.dumps(plants, indent=2, default=str)
+
+
 # ═══════════════════════════════════════════════════════════════
 # KNOWLEDGE CATEGORIES (THE SPOKES)
 # ═══════════════════════════════════════════════════════════════

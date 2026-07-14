@@ -11,9 +11,11 @@
         <a href="{{ url_for('admin_plants') }}" class="btn btn-secondary">Manage Plants</a>
         <a href="{{ url_for('admin_categories') }}" class="btn btn-secondary">Categories</a>
         <a href="{{ url_for('admin_blockchain') }}" class="btn btn-secondary">Blockchain</a>
+        <a href="{{ url_for('admin_export', datatype='plants-csv') }}" class="btn btn-success">Export Plants</a>
         {% if user.role == 'admin' %}
             <a href="{{ url_for('admin_groups') }}" class="btn btn-secondary">Groups</a>
             <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">Users</a>
+            <a href="{{ url_for('admin_audit') }}" class="btn btn-secondary">Audit Log</a>
         {% endif %}
         <a href="{{ url_for('admin_logout') }}" class="btn btn-danger">Logout</a>
     </div>
