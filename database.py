@@ -359,8 +359,32 @@ def init_database():
         cursor.execute("ALTER TABLE knowledge_records ADD COLUMN cultural_protocol TEXT")
         print("Migration: added cultural_protocol column to knowledge_records table")
 
+    # --- USE CATEGORIES TABLE (C1: structured taxonomy) ---
+    # Reference table giving structure to the TEXT use_category values in plant_uses.
+    # Supports hierarchy via parent_id (for sub-categories) and metadata (icon, description).
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS use_categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            slug TEXT NOT NULL UNIQUE,
+            display_name TEXT NOT NULL,
+            parent_id INTEGER,
+            icon TEXT,
+            description TEXT,
+            sort_order INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (parent_id) REFERENCES use_categories(id) ON DELETE SET NULL
+        )
+    """)
+
     conn.commit()
     conn.close()
+
+    # Seed standard use categories (idempotent — only inserts if empty)
+    _seed_use_categories()
+
+    # Auto-migrate free-text traditional_uses into structured plant_uses records
+    # Only runs if plant_uses is empty (so it doesn't clobber manually-added data)
+    migrate_uses_to_structured()
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -615,6 +639,259 @@ def get_use_categories_summary() -> List[Dict[str, Any]]:
         GROUP BY use_category
         ORDER BY count DESC
     """)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+# ═══════════════════════════════════════════════════════════════
+# STRUCTURED USE CATEGORIES (C1: taxonomy)
+# ═══════════════════════════════════════════════════════════════
+
+# Standard category definitions — used for seeding and migration
+_STANDARD_USE_CATEGORIES = [
+    {"slug": "medicinal", "display_name": "Medicinal", "icon": "💊",
+     "description": "Plants used for healing, remedies, and treating ailments.",
+     "sort_order": 1},
+    {"slug": "food", "display_name": "Food", "icon": "🍽️",
+     "description": "Plants eaten as food — berries, greens, roots, preserved stores.",
+     "sort_order": 2},
+    {"slug": "tea", "display_name": "Tea & Beverage", "icon": "🍵",
+     "description": "Plants brewed as teas or beverages.",
+     "sort_order": 3},
+    {"slug": "fiber", "display_name": "Fiber & Weaving", "icon": "🧵",
+     "description": "Plants used for cordage, baskets, mats, and weaving.",
+     "sort_order": 4},
+    {"slug": "dye", "display_name": "Dye & Pigment", "icon": "🎨",
+     "description": "Plants used to produce dyes, pigments, and colorants.",
+     "sort_order": 5},
+    {"slug": "tool", "display_name": "Tool & Craft", "icon": "🛠️",
+     "description": "Plants used for tools, implements, weapons, and crafts.",
+     "sort_order": 6},
+    {"slug": "spiritual", "display_name": "Spiritual & Ceremonial", "icon": "🔮",
+     "description": "Plants used in ceremonies, rituals, and spiritual practices.",
+     "sort_order": 7},
+    {"slug": "construction", "display_name": "Construction", "icon": "🏗️",
+     "description": "Plants used for building, timber, shelter, and canoes.",
+     "sort_order": 8},
+    {"slug": "other", "display_name": "Other", "icon": "📋",
+     "description": "Plants with other or uncategorized traditional uses.",
+     "sort_order": 9},
+]
+
+# Keyword sets for migration — each maps a category slug to the keywords
+# that, when found in traditional_uses free-text, indicate that category.
+_USE_KEYWORDS: Dict[str, List[str]] = {
+    "medicinal": [
+        "medicinal", "medicine", "remedy", "healing", "treatment", "cure",
+        "poultice", "infusion", "decoction", "tonic", "wound", "cold", "cough",
+        "sore throat", "fever", "pain", "arthritis", "stomach", "diarrhea",
+        "laxative", "emetic", "antibiotic", "antiseptic", "sedative",
+        "respiratory", "tuberculosis", "skin", "burn", "infection", "swelling",
+    ],
+    "food": [
+        "eaten", "food", "berry", "berries", "fruit", "edible", "greens",
+        "vegetable", "root", "tuber", "starch", "flour", "preserved", "dried",
+        "stored", "akutaq", "seal oil", "fat", "soup", "stew", "roasted",
+        "boiled", "raw",
+    ],
+    "tea": [
+        "tea", "steep", "brew", "beverage", "drank", "drink",
+    ],
+    "fiber": [
+        "fiber", "fibre", "cordage", "rope", "basket", "weaving", "mat",
+    ],
+    "dye": [
+        "dye", "pigment", "color", "colour", "paint", "stain",
+    ],
+    "tool": [
+        "tool", "craft", "wood", "implement", "weapon", "trap",
+        "tool handle", "bark", "carving",
+    ],
+    "spiritual": [
+        "spiritual", "ceremonial", "ceremony", "shaman", "sacred", "ritual",
+        "charm", "amulet", "offering", "smoke", "smudge",
+    ],
+    "construction": [
+        "construction", "building", "timber", "plank", "canoe", "house",
+        "shelter",
+    ],
+}
+
+
+def _seed_use_categories():
+    """Populate the use_categories table with standard categories.
+
+    Idempotent: only inserts categories that don't already exist.
+    Called from init_database().
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    now = _now()
+    inserted = 0
+    for cat in _STANDARD_USE_CATEGORIES:
+        cursor.execute("SELECT id FROM use_categories WHERE slug = ?", (cat["slug"],))
+        if cursor.fetchone() is None:
+            cursor.execute("""
+                INSERT INTO use_categories
+                (slug, display_name, parent_id, icon, description, sort_order, created_at)
+                VALUES (?, ?, NULL, ?, ?, ?, ?)
+            """, (cat["slug"], cat["display_name"], cat["icon"],
+                  cat["description"], cat["sort_order"], now))
+            inserted += 1
+    conn.commit()
+    conn.close()
+    if inserted:
+        print(f"Seeded {inserted} use categories into use_categories table.")
+
+
+def migrate_uses_to_structured():
+    """Parse all plants' traditional_uses free-text into structured plant_uses records.
+
+    Uses keyword matching against _USE_KEYWORDS to assign each plant one or more
+    use categories. Creates one plant_uses row per (plant, category) pair.
+
+    Only runs if plant_uses is empty — so it won't clobber manually-added data
+    or re-run on subsequent app starts.
+
+    Source attribution: "Auto-migrated from traditional_uses"
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Check if plant_uses already has records — skip migration if so
+    cursor.execute("SELECT COUNT(*) FROM plant_uses")
+    existing_count = cursor.fetchone()[0]
+    if existing_count > 0:
+        conn.close()
+        return
+
+    # Get all plants with traditional_uses text
+    cursor.execute("""
+        SELECT id, latin_binomial, english_name, traditional_uses
+        FROM plants
+        WHERE traditional_uses IS NOT NULL
+          AND TRIM(traditional_uses) != ''
+    """)
+    plants = cursor.fetchall()
+
+    if not plants:
+        conn.close()
+        return
+
+    now = _now()
+    migrated_count = 0
+    plant_count = 0
+
+    for plant in plants:
+        plant_id = plant["id"]
+        uses_text = plant["traditional_uses"].lower()
+        matched_categories = set()
+
+        for cat_slug, keywords in _USE_KEYWORDS.items():
+            for kw in keywords:
+                if kw in uses_text:
+                    matched_categories.add(cat_slug)
+                    break  # one match is enough for this category
+
+        # If nothing matched but the plant has traditional_uses text, tag as "other"
+        if not matched_categories and uses_text.strip():
+            matched_categories.add("other")
+
+        for cat_slug in matched_categories:
+            cursor.execute("""
+                INSERT INTO plant_uses
+                (plant_id, group_id, use_category, use_detail, season, source, created_at)
+                VALUES (?, NULL, ?, NULL, NULL, ?, ?)
+            """, (plant_id, cat_slug, "Auto-migrated from traditional_uses", now))
+            use_id = cursor.lastrowid
+
+            # Add blockchain block for integrity
+            data = {"table": "plant_uses", "id": use_id, "plant_id": plant_id,
+                    "use_category": cat_slug, "group_id": None,
+                    "source": "Auto-migrated from traditional_uses"}
+            block_hash = add_block_within_conn(conn, "plant_uses", use_id,
+                                               "INSERT", data)
+            cursor.execute("UPDATE plant_uses SET block_hash = ? WHERE id = ?",
+                           (block_hash, use_id))
+            migrated_count += 1
+
+        if matched_categories:
+            plant_count += 1
+
+    conn.commit()
+    conn.close()
+    if migrated_count > 0:
+        print(f"Migration: created {migrated_count} structured plant_uses records "
+              f"for {plant_count} plants from traditional_uses free-text.")
+
+
+def get_use_categories() -> List[Dict[str, Any]]:
+    """Get all use categories, ordered by sort_order.
+
+    Returns list of dicts with keys: id, slug, display_name, parent_id,
+    icon, description, sort_order.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, slug, display_name, parent_id, icon, description, sort_order
+        FROM use_categories
+        ORDER BY sort_order ASC, display_name ASC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_plants_by_use_category(category_slug: str,
+                               limit: Optional[int] = None,
+                               offset: int = 0) -> List[Dict[str, Any]]:
+    """Get all plants that have a structured use in the given category.
+
+    Joins plant_uses with plants, filtered by use_category = category_slug.
+    Returns distinct plant rows.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = """
+        SELECT DISTINCT p.*
+        FROM plants p
+        INNER JOIN plant_uses pu ON pu.plant_id = p.id
+        WHERE pu.use_category = ? AND p.verified = 1
+        ORDER BY p.english_name ASC
+    """
+    params: list = [category_slug]
+    if limit:
+        query += " LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_structured_uses_for_plant(plant_id: int) -> List[Dict[str, Any]]:
+    """Get structured use categories for a specific plant.
+
+    Returns list of dicts with: use_category (slug), display_name, icon,
+    use_detail, source, count (number of records in that category).
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT pu.use_category,
+               uc.display_name,
+               uc.icon,
+               pu.use_detail,
+               pu.source,
+               COUNT(*) as count
+        FROM plant_uses pu
+        LEFT JOIN use_categories uc ON pu.use_category = uc.slug
+        WHERE pu.plant_id = ?
+        GROUP BY pu.use_category, uc.display_name, uc.icon, pu.use_detail, pu.source
+        ORDER BY uc.sort_order ASC, uc.display_name ASC
+    """, (plant_id,))
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in rows]

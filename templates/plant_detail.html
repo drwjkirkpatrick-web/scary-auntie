@@ -41,6 +41,29 @@
             <div class="detail-section">
                 <h2>&#127807; Traditional Uses</h2>
                 <p>{{ plant.traditional_uses }}</p>
+                {% if structured_uses %}
+                <div class="use-category-badges" style="margin-top: 0.75rem;">
+                    {% for su in structured_uses %}
+                    <a href="{{ url_for('plant_list', use_category=su.use_category) }}"
+                       class="badge badge-approved" style="display: inline-block; margin: 0.2rem 0.3rem 0.2rem 0; text-decoration: none;">
+                        {{ su.icon or '&#127807;' }} {{ su.display_name or su.use_category|capitalize }}
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% elif structured_uses %}
+            <div class="detail-section">
+                <h2>&#127807; Traditional Uses</h2>
+                <p><em>No free-text description available, but structured uses have been categorized:</em></p>
+                <div class="use-category-badges" style="margin-top: 0.75rem;">
+                    {% for su in structured_uses %}
+                    <a href="{{ url_for('plant_list', use_category=su.use_category) }}"
+                       class="badge badge-approved" style="display: inline-block; margin: 0.2rem 0.3rem 0.2rem 0; text-decoration: none;">
+                        {{ su.icon or '&#127807;' }} {{ su.display_name or su.use_category|capitalize }}
+                    </a>
+                    {% endfor %}
+                </div>
             </div>
             {% endif %}
 

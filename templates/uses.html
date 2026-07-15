@@ -25,6 +25,25 @@
     </form>
 </section>
 
+{% if structured_categories %}
+<section class="content-section">
+    <h2>&#127807; Structured Use Categories</h2>
+    <p style="color: #666; margin-bottom: 1rem;">Browse plants by structured use category (from the taxonomy):</p>
+    <div class="stats-bar">
+        {% for sc in structured_categories %}
+        <a href="{{ url_for('plant_list', use_category=sc.slug) }}"
+           class="stat-card" style="text-decoration: none; color: inherit; cursor: pointer;">
+            <div class="stat-number">{{ sc.icon }}</div>
+            <div class="stat-label">{{ sc.display_name }}</div>
+            {% if sc.description %}
+            <div style="font-size: 0.75rem; color: #888; margin-top: 0.3rem;">{{ sc.description[:60] }}{% if sc.description|length > 60 %}...{% endif %}</div>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
 {% if summary %}
 <section class="content-section">
     <h2>&#128202; Use Categories Summary</h2>

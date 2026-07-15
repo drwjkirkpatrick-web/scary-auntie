@@ -35,7 +35,8 @@ scary-auntie is a Flask-based web application that enables communities to record
 
 ### Core Botanical Database (The Hub)
 - **292 verified plants** with three-name system (Native/Latin/English)
-- Search by name, family, use type (medicinal/food/tea/tool/spiritual)
+- Search by name, family, **structured use category** (medicinal/food/tea/fiber/dye/tool/spiritual/construction)
+- **Structured use-category taxonomy** — 525 plant-use records auto-migrated from free-text `traditional_uses` using keyword matching, with 9 standardized categories (GAP_ANALYSIS.md item C1)
 - Plant typeahead search for 292 plants with keyboard navigation
 - Print-friendly plant detail pages
 - Admin: add, edit, export (CSV/JSON) plants
@@ -56,7 +57,11 @@ scary-auntie is a Flask-based web application that enables communities to record
 ### Plant Uses Cross-Reference
 - Records how specific groups/clans use specific plants for what purposes
 - Use categories: food, medicinal, fiber, dye, tool, spiritual, construction, other
-- Filterable by group and use category
+- **Structured `use_categories` reference table** with slugs, display names, icons, and hierarchy support (GAP_ANALYSIS.md item C1)
+- **525 auto-migrated plant-use records** parsed from free-text `traditional_uses` fields using keyword matching
+- Filterable by group and use category — structured filtering replaces fragile keyword matching
+- Plant detail pages show use-category badges (💊 Medicinal, 🍽️ Food, 🍵 Tea, etc.)
+- Plants browse page has structured use-category filter links with live counts
 - Summary dashboard with use-category counts
 - Comparable to Moerman's Native American Ethnobotany Database
 

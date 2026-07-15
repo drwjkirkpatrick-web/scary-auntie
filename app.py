@@ -48,6 +48,7 @@ from database import (
     add_plant_use, get_plant_uses, get_use_categories_summary,
     add_lesson_plan, get_lesson_plans, get_lesson_by_id,
     seed_default_categories, seed_default_group,
+    get_use_categories, get_plants_by_use_category, get_structured_uses_for_plant,
 )
 import seed_data
 
@@ -140,18 +141,26 @@ def index():
 def plant_list():
     """Browse all verified plants with pagination + search + filters."""
     search = request.args.get("search", "").strip()
+    use_category = request.args.get("use_category", "").strip()
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", PER_PAGE, type=int)
     per_page = min(per_page, 100)  # cap to prevent abuse
     offset = (page - 1) * per_page
 
-    plants = get_all_plants(search=search, verified_only=True,
-                            limit=per_page, offset=offset)
-    total = get_plant_count() if not search else len(get_all_plants(search=search, verified_only=True))
+    # If use_category filter is active, filter plants by structured use category
+    if use_category:
+        plants = get_plants_by_use_category(use_category, limit=per_page, offset=offset)
+        total = len(get_plants_by_use_category(use_category))
+    else:
+        plants = get_all_plants(search=search, verified_only=True,
+                                limit=per_page, offset=offset)
+        total = get_plant_count() if not search else len(get_all_plants(search=search, verified_only=True))
     families = get_plant_categories()
     # Improvement 6: Use-type and language filters for students
     use_types = get_plant_use_types()
     languages = get_plant_languages()
+    # C1: Structured use categories for filter links
+    use_categories = get_use_categories()
 
     # Simple pagination calculation
     pages = max(1, (total + per_page - 1) // per_page)
@@ -159,7 +168,9 @@ def plant_list():
     return render_template("plants.html", plants=plants, search=search,
                            page=page, pages=pages, per_page=per_page,
                            total=total, families=families,
-                           use_types=use_types, languages=languages)
+                           use_types=use_types, languages=languages,
+                           use_categories=use_categories,
+                           current_use_category=use_category)
 
 
 @app.route("/plants/<int:plant_id>")
@@ -169,7 +180,10 @@ def plant_detail(plant_id):
     if not plant:
         flash("Plant not found.", "error")
         return redirect(url_for("plant_list"))
-    return render_template("plant_detail.html", plant=plant)
+    # C1: Get structured use categories for this plant
+    structured_uses = get_structured_uses_for_plant(plant_id)
+    return render_template("plant_detail.html", plant=plant,
+                           structured_uses=structured_uses)
 
 
 @app.route("/add-observation", methods=["GET", "POST"])
@@ -977,10 +991,12 @@ def plant_uses():
     uses = get_plant_uses(group_id=gid, use_category=use_category or None)
     summary = get_use_categories_summary()
     groups = get_all_groups()
-    categories = ["food", "medicinal", "fiber", "dye", "tool",
-                  "spiritual", "construction", "other"]
+    # C1: Structured use categories from the taxonomy table
+    structured_categories = get_use_categories()
     return render_template("uses.html", uses=uses, summary=summary,
-                           groups=groups, categories=categories,
+                           groups=groups, categories=["food", "medicinal", "fiber", "dye", "tool",
+                                                       "spiritual", "construction", "other"],
+                           structured_categories=structured_categories,
                            current_group=gid, current_category=use_category)
 
 

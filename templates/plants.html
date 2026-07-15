@@ -34,10 +34,29 @@
 </section>
 {% endif %}
 
+{% if use_categories %}
+<section class="content-section">
+    <details class="filter-panel">
+        <summary>&#127807; Filter by Use Category</summary>
+        <div class="family-tags">
+            {% for uc in use_categories %}
+            <a href="{{ url_for('plant_list', use_category=uc.slug) }}"
+               class="family-tag {% if current_use_category == uc.slug %}active{% endif %}">
+                {{ uc.icon }} {{ uc.display_name }}
+            </a>
+            {% endfor %}
+            {% if current_use_category %}
+            <a href="{{ url_for('plant_list') }}" class="family-tag" style="font-weight: bold;">&#10006; Clear</a>
+            {% endif %}
+        </div>
+    </details>
+</section>
+{% endif %}
+
 {% if use_types %}
 <section class="content-section">
     <details class="filter-panel">
-        <summary>&#127807; Filter by Use Type</summary>
+        <summary>&#128269; Keyword-based Use Types (legacy)</summary>
         <div class="family-tags">
             {% for ut in use_types %}
             <a href="{{ url_for('plant_list', search=ut.use_type) }}" class="family-tag">
