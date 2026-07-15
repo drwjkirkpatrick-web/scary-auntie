@@ -26,7 +26,7 @@ scary-auntie is a Flask-based web application that enables communities to record
   └──────────┘
 ```
 
-- **Plants (Botanicals)** = the HUB. The prepopulated, verified reference database of 250 Alaskan Native botanicals. Every other module connects back to specific plants.
+- **Plants (Botanicals)** = the HUB. The prepopulated, verified reference database of 292 Alaskan Native botanicals. Every other module connects back to specific plants.
 - **Knowledge Categories** = the SPOKES. Extensible topics: animals, weather, stories & oral history, place names, crafts, and more.
 - **Knowledge Records** = observations within any category, contributed by community members and reviewed by teachers/admins.
 - **Groups** = community customization. Each clan, tribe, village, or school can customize their name, languages, territory, map center, branding colors, and which categories they use.
@@ -34,9 +34,9 @@ scary-auntie is a Flask-based web application that enables communities to record
 ## Modules
 
 ### Core Botanical Database (The Hub)
-- **250 verified plants** with three-name system (Native/Latin/English)
+- **292 verified plants** with three-name system (Native/Latin/English)
 - Search by name, family, use type (medicinal/food/tea/tool/spiritual)
-- Plant typeahead search for 250+ plants with keyboard navigation
+- Plant typeahead search for 292 plants with keyboard navigation
 - Print-friendly plant detail pages
 - Admin: add, edit, export (CSV/JSON) plants
 - Pagination (24/page) on all plant lists
@@ -121,7 +121,7 @@ scary-auntie is a Flask-based web application that enables communities to record
 
 ## Prepopulated Database
 
-**250 verified plants** (deduplicated from 258 across 6 seed batches) from authoritative sources:
+**292 verified plants** (250 original + 42 from gap analysis) from authoritative sources:
 
 | Category | Examples | Count |
 |----------|----------|-------|
@@ -133,8 +133,9 @@ scary-auntie is a Flask-based web application that enables communities to record
 | **Spring Greens** | Cow Parsnip, Nettle, Fireweed Shoots, Solomon's Seal, Watermelon Berry, Mountain Sorrel, Oysterplant | 7 |
 | **Other** | Kinnikinnick, Soapberry, Prickly Rose, Narcissus Anemone, Arctic Lupine, Prairie Smoke | 6 |
 | **Additional Batches 3–6** | 205 more botanicals from Wikipedia, USFS, and ethnobotanical literature | 205 |
+| **Gap Analysis (2026)** | 42 species from Garibaldi PDF gap analysis: ferns, lichens, mosses, seaweeds, fungi, herbs | 42 |
 
-**Sources**: Garibaldi (1999), Kari (1987), Jones (1983), Schofield (1993), Heller (1976), USFS Alaska Region TEK, Wikipedia ethnobotanical articles, Telander (2012), Olson (1997)
+**Sources**: Garibaldi (1999) — Medicinal Flora of the Alaska Natives (primary source for gap analysis), Kari (1987), Jones (1983), Schofield (1993), Heller (1976), USFS Alaska Region TEK, UAF Museum of the North Ethnobotany Film Series, State of Alaska Ethnobotany Project, Wikipedia ethnobotanical articles, Telander (2012), Olson (1997)
 
 **Languages represented**: Yupik, Inupiaq, Dena'ina, Ahtna, Tlingit, Haida, Alutiiq/Sugpiaq, Aleut/Unangan, Athabascan (multiple dialects), Gwich'in, Tsimshian, and others
 
@@ -203,7 +204,7 @@ Default admin credentials (change in production):
 scary-auntie/
 ├── app.py                  # Flask application — routes, auth, API, modules
 ├── database.py             # Database + blockchain + all module functions
-├── seed_data.py            # 250 verified Alaskan botanical seed entries
+├── seed_data.py            # 292 verified Alaskan botanical seed entries
 ├── dedup_plants.py         # One-time deduplication script (8 merge pairs)
 ├── requirements.txt        # Python dependencies
 ├── data/
